@@ -1,11 +1,90 @@
+/*
+ * Design tokens: every color, spacing, and typography value used by
+ * the components is a variable on :root so we can dark-mode and
+ * theme without touching component CSS.
+ */
+
 :root {
-  --bg: #0f1115;
-  --fg: #f3f4f6;
-  --accent: #f5a524;
-  font-family: system-ui, sans-serif;
+  /* Lorcana ink palette. Light mode values; the dark scheme below
+     adjusts where readability suffers. These are the only six colors
+     the UI uses for ink-specific decoration. */
+  --ink-amber: #f5b945;
+  --ink-amethyst: #9e5fbf;
+  --ink-emerald: #3fa86b;
+  --ink-ruby: #d94a4a;
+  --ink-sapphire: #4a8ad9;
+  --ink-steel: #8a9099;
+
+  /* Neutrals. */
+  --bg: #f7f7f8;
+  --bg-elevated: #ffffff;
+  --bg-subtle: #efeff2;
+  --text: #1f2024;
+  --text-muted: #6b7280;
+  --border: #e1e3e8;
+  --border-strong: #c9ccd2;
+  --shadow-sm: 0 1px 2px rgba(15, 17, 22, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 17, 22, 0.08);
+
+  /* Accents. */
+  --accent: var(--ink-sapphire);
+  --accent-text: #ffffff;
+
+  /* Typography. */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif, "Apple Color Emoji";
+  --font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --fs-100: 0.75rem;
+  --fs-200: 0.875rem;
+  --fs-300: 1rem;
+  --fs-400: 1.125rem;
+  --fs-500: 1.375rem;
+  --fs-600: 1.75rem;
+
+  /* Spacing scale (4 px base). */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-8: 3rem;
+
+  /* Misc. */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-pill: 999px;
+  --transition-fast: 120ms ease-out;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --bg-elevated: #1c1f25;
+    --bg-subtle: #23262e;
+    --text: #e7e9ee;
+    --text-muted: #9ba2ad;
+    --border: #2c3038;
+    --border-strong: #3f444f;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.4);
+
+    /* Slightly tone down the saturated inks so they don't vibrate
+       against a dark background. */
+    --ink-amber: #f5c462;
+    --ink-amethyst: #b078d0;
+    --ink-emerald: #4fb87a;
+    --ink-ruby: #e06464;
+    --ink-sapphire: #6ba2e0;
+    --ink-steel: #a6acb6;
+  }
 }
 
 body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-300);
   background: var(--bg);
-  color: var(--fg);
+  color: var(--text);
 }

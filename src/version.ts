@@ -22,3 +22,6 @@ export const CARDS_RELEASE_TAG = "cards-v2026.05.13-01";
 export const MODEL_RELEASE_TAG: string | null = null;
 
 export const EXPECTED_SCHEMA_MAJOR = 0;
+
+/** App version, surfaced in the header for traceability. */
+export const VERSION = "0.1.0";

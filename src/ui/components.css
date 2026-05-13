@@ -1,1 +1,180 @@
-/* TODO: component styles. */
+/*
+ * Component styles. Selectors target Web Component custom elements
+ * directly (no Shadow DOM today — keeps inspection and theming
+ * straightforward; revisit if encapsulation becomes a real need).
+ */
+
+app-root {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  min-height: 100vh;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding: var(--sp-4) var(--sp-5);
+  gap: var(--sp-5);
+}
+
+/* ----- Header --------------------------------------------------- */
+.lorcana-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+.lorcana-header h1 {
+  font-size: var(--fs-600);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.lorcana-header .meta {
+  color: var(--text-muted);
+  font-size: var(--fs-100);
+  font-family: var(--font-mono);
+}
+
+/* ----- Action bar ----------------------------------------------- */
+.action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3) var(--sp-4);
+  box-shadow: var(--shadow-sm);
+}
+.action-bar > * + * {
+  margin-left: 0;
+}
+
+button.primary,
+button.secondary,
+button.ghost {
+  font-size: var(--fs-200);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-sm);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+button.primary {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+button.secondary {
+  background: var(--bg-subtle);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+button.ghost {
+  color: var(--text-muted);
+}
+button.primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+button.secondary:hover:not(:disabled),
+button.ghost:hover:not(:disabled) {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* ----- Ink selector --------------------------------------------- */
+ink-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+ink-selector .ink-label {
+  font-size: var(--fs-200);
+  color: var(--text-muted);
+  margin-right: var(--sp-1);
+}
+.ink-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-pill);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  font-size: var(--fs-200);
+  color: var(--text);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+.ink-chip:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+.ink-chip[aria-pressed="true"] {
+  color: var(--accent-text);
+  background: var(--ink-color);
+  border-color: var(--ink-color);
+}
+.ink-chip .dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--ink-color);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset;
+}
+.ink-chip[aria-pressed="true"] .dot {
+  background: var(--accent-text);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35) inset;
+}
+
+/* ----- Main two-column layout ---------------------------------- */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--sp-5);
+  min-height: 0; /* let children scroll within their grid track */
+}
+@media (max-width: 880px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4) var(--sp-5);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: 280px;
+}
+.panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+.panel header h2 {
+  font-size: var(--fs-500);
+  font-weight: 600;
+}
+.panel header .count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-200);
+  color: var(--text-muted);
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  flex: 1;
+  color: var(--text-muted);
+  padding: var(--sp-5);
+}
+.empty-state p {
+  max-width: 32ch;
+}
