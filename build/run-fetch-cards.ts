@@ -13,7 +13,7 @@
  *   pnpm prefetch:cards
  */
 
-import { fetchCards } from "./fetch-cards.ts";
+import { fetchCards } from "./fetch-cards";
 
 const plugin = fetchCards();
 
