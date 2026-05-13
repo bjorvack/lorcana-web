@@ -1,0 +1,10 @@
+name: build
+on:
+  push:
+    branches: [main]
+# TODO: build + deploy to gh-pages on main push.
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo stub

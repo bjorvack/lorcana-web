@@ -1,0 +1,37 @@
+{
+  "name": "@bjorvack/lorcana-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Vanilla-TS deck builder with in-browser inference, deployed to GitHub Pages.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@bjorvack/lorcana-schemas": "^0.1.0",
+    "onnxruntime-web": "^1.19.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0",
+    "@types/node": "^20.14.0",
+    "eslint": "^9.9.0",
+    "prettier": "^3.3.0",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "@playwright/browser-chromium"]
+  }
+}

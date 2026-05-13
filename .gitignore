@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.DS_Store
+*.log
+.idea
+.vscode
+src/generated
+public/cards.json
+public/model
+playwright-report
+test-results
