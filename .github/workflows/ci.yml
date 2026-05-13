@@ -24,13 +24,20 @@ jobs:
           # the `.npmrc` reads this env var.
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Materialise `src/data/cards.json` + `cards.meta.ts` before
+      # the lint / typecheck / test steps that import them. The
+      # plugin is otherwise wired into `vite build`, but that runs
+      # *after* typecheck on purpose — we don't want to bundle a
+      # codebase that doesn't even compile.
+      - run: pnpm prefetch:cards
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
 
-      # Full build, including the fetch-cards Vite plugin that
-      # downloads the pinned `cards-vN` from `lorcana-scraper` and
-      # bakes it into the bundle.
+      # Full build, exercises the plugin path as well.
       - run: pnpm build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

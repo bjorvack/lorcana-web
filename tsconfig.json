@@ -11,7 +11,8 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "noEmit": true
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
   "include": ["src", "build", "tests"]
 }
