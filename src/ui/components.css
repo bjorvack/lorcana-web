@@ -244,10 +244,48 @@ card-finder {
   font-size: var(--fs-200);
 }
 .card-row {
-  grid-template-columns: auto auto 1fr auto auto;
+  grid-template-columns: auto auto auto 1fr auto;
 }
 .deck-row {
-  grid-template-columns: auto auto auto 1fr auto;
+  grid-template-columns: auto auto auto auto 1fr auto;
+}
+
+.card-row-thumb {
+  display: inline-block;
+  width: 36px;
+  height: 50px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.card-row-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+
+.card-row-namebox {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+.card-row-namebox .card-row-meta {
+  font-size: var(--fs-100);
+}
+.card-row-printing {
+  font-size: var(--fs-100);
+  font-family: var(--font-mono);
+  padding: 1px var(--sp-1);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  align-self: flex-start;
+  margin-top: 2px;
 }
 
 .card-row-inks {
@@ -282,6 +320,7 @@ card-finder {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  display: block;
 }
 .card-row-meta {
   color: var(--text-muted);

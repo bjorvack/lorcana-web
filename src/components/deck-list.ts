@@ -100,6 +100,17 @@ function buildRow(row: DeckRow): HTMLElement {
   const li = document.createElement("li");
   li.className = "deck-row";
 
+  // Thumbnail of the specific printing the user added. Lazy-loaded so
+  // tall decks don't blast the network on first paint.
+  const thumbWrap = document.createElement("span");
+  thumbWrap.className = "card-row-thumb";
+  const img = document.createElement("img");
+  img.src = row.card.imageUrl;
+  img.loading = "lazy";
+  img.decoding = "async";
+  img.alt = `${row.card.name}${row.card.version ? ` — ${row.card.version}` : ""}`;
+  thumbWrap.append(img);
+
   const countCtrl = document.createElement("span");
   countCtrl.className = "deck-row-count";
   const minus = document.createElement("button");
@@ -152,7 +163,7 @@ function buildRow(row: DeckRow): HTMLElement {
     deckStore.update((state) => toggleLock(state, row.card.id).state),
   );
 
-  li.append(countCtrl, inkBox, cost, name, lock);
+  li.append(countCtrl, thumbWrap, inkBox, cost, name, lock);
   return li;
 }
 
