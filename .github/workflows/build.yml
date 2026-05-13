@@ -1,10 +1,64 @@
 name: build
+
+# Build the Vite bundle (including the fetch-cards plugin that downloads
+# the pinned cards-vN release) and deploy the result to GitHub Pages.
+# Pages source must be set to "GitHub Actions" in repo settings — this
+# workflow uploads via the official actions/upload-pages-artifact +
+# actions/deploy-pages chain rather than pushing a gh-pages branch, so
+# git history never accumulates the bundled bytes.
+
 on:
   push:
     branches: [main]
-# TODO: build + deploy to gh-pages on main push.
+  workflow_dispatch:
+
+# One concurrent deploy at a time, cancel a queued one if a fresher
+# commit lands on main.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
-  noop:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - run: echo stub
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: "@bjorvack"
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: pnpm prefetch:cards
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: pnpm build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
