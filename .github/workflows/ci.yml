@@ -17,9 +17,20 @@ jobs:
           cache: pnpm
           registry-url: https://npm.pkg.github.com
           scope: "@bjorvack"
+
       - run: pnpm install --frozen-lockfile
         env:
+          # `@bjorvack/lorcana-schemas` is published to GitHub Packages;
+          # the `.npmrc` reads this env var.
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+
+      # Full build, including the fetch-cards Vite plugin that
+      # downloads the pinned `cards-vN` from `lorcana-scraper` and
+      # bakes it into the bundle.
+      - run: pnpm build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

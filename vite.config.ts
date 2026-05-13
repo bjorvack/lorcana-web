@@ -1,8 +1,10 @@
 import { defineConfig } from "vite";
 
+import { fetchCards } from "./build/fetch-cards";
+
 export default defineConfig({
-  // TODO: add fetch-cards + fetch-model plugins (see build/).
   base: "./",
+  plugins: [fetchCards()],
   build: {
     target: "es2022",
     sourcemap: true,
