@@ -14,12 +14,15 @@
 
 export const CARDS_RELEASE_TAG = "cards-v2026.05.13-01";
 
-// Until lorcana-training ships its first model-vN release (which
-// itself requires tournaments-v1.0.0 + proposal/evaluator
-// training), the web bundle has no model assets and AI features
-// are unavailable. The build's model-fetch plugin treats `null`
-// as "skip the download" so we can deploy Phase 1 without one.
-export const MODEL_RELEASE_TAG: string | null = null;
+// First trained release on tournaments-v0.3.0 (1 046 tournaments,
+// 6 137 decks). Proposal net + per-step evaluator + play_frequency
+// + archetype_centroids, all ONNX-exported and bundled. See
+// https://github.com/bjorvack/lorcana-training/releases/tag/model-v0.1.0.
+//
+// Bump this in lock-step with CARDS_RELEASE_TAG: the build's
+// fetch-model plugin enforces that the model's cardSetVersion
+// equals the cards.json's cardSetVersion or the build fails.
+export const MODEL_RELEASE_TAG: string | null = "model-v0.1.0";
 
 export const EXPECTED_SCHEMA_MAJOR = 0;
 

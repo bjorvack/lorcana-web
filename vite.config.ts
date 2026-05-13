@@ -3,10 +3,13 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 
 import { fetchCards } from "./build/fetch-cards";
+import { fetchModel } from "./build/fetch-model";
 
 export default defineConfig({
   base: "./",
-  plugins: [fetchCards()],
+  // Plugin order is significant: fetchCards writes cards.meta.ts
+  // before fetchModel reads it for the cardSetVersion cross-check.
+  plugins: [fetchCards(), fetchModel()],
   resolve: {
     alias: {
       // `@bjorvack/lorcana-schemas` imports `createHash` from `crypto`

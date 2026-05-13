@@ -500,3 +500,51 @@ card-preview[data-visible="true"] {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
 }
+
+/* ----- Deck generator (Generate-deck button + style picker) ---- */
+.deck-generator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.deck-generator .generator-style {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-200);
+  color: var(--text-muted);
+}
+.deck-generator select {
+  font-size: var(--fs-200);
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.deck-generator button.primary {
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--accent);
+  color: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.deck-generator button.primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.deck-generator .generator-status {
+  font-size: var(--fs-200);
+  color: var(--text-muted);
+  min-width: 12ch;
+}
+.deck-generator .generator-status.error {
+  color: var(--ink-ruby, #c33);
+}
+.deck-generator .generator-prefill {
+  font-size: var(--fs-100);
+  color: var(--text-muted);
+}

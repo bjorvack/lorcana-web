@@ -18,6 +18,7 @@ import { totalCards } from "../state/selectors";
 import { buildHash } from "../state/url";
 import { VERSION } from "../version";
 import "./card-finder";
+import "./deck-generator";
 import "./deck-list";
 // `InkSelector` is used only as a TypeScript type below, so we also
 // need the side-effect import to ensure the custom element gets
@@ -82,6 +83,7 @@ export class AppRoot extends HTMLElement {
       <div class="action-bar">
         <ink-selector></ink-selector>
         <span style="flex: 1"></span>
+        <deck-generator></deck-generator>
         <button class="secondary" disabled title="Coming in the next commit">Export</button>
         <button class="ghost" data-role="clear-deck">Clear deck</button>
       </div>
