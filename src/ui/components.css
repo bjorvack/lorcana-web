@@ -178,3 +178,203 @@ ink-selector .ink-label {
 .empty-state p {
   max-width: 32ch;
 }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ----- Card finder --------------------------------------------- */
+card-finder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-height: 0;
+  flex: 1;
+}
+
+.card-search input[type="search"] {
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-300);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+.card-search input[type="search"]:focus {
+  border-color: var(--accent);
+  background: var(--bg-elevated);
+}
+
+.card-finder-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Match the panel's inset so the scroll thumb doesn't sit on top
+     of the panel border. */
+  margin-inline: calc(var(--sp-5) * -1);
+  padding-inline: var(--sp-5);
+}
+.card-finder-list {
+  display: flex;
+  flex-direction: column;
+}
+.card-finder-meta {
+  color: var(--text-muted);
+  font-size: var(--fs-100);
+  text-align: center;
+}
+
+/* ----- Shared row layout (finder + deck) ----------------------- */
+.card-row,
+.deck-row {
+  display: grid;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-200);
+}
+.card-row {
+  grid-template-columns: auto auto 1fr auto auto;
+}
+.deck-row {
+  grid-template-columns: auto auto auto 1fr auto;
+}
+
+.card-row-inks {
+  display: inline-flex;
+  gap: 2px;
+}
+.ink-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1) inset;
+}
+
+.card-row-cost {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-200);
+  font-weight: 600;
+}
+
+.card-row-name {
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.card-row-meta {
+  color: var(--text-muted);
+  font-size: var(--fs-100);
+  white-space: nowrap;
+}
+
+.card-row-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.card-row-count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-100);
+  color: var(--text-muted);
+}
+button.card-row-add {
+  font-size: var(--fs-300);
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+/* ----- Deck list ----------------------------------------------- */
+deck-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Same inset trick as the finder. */
+  margin-inline: calc(var(--sp-5) * -1);
+  padding-inline: var(--sp-5);
+}
+.deck-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.deck-group {
+  display: flex;
+  flex-direction: column;
+}
+.deck-group-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--fs-200);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--border-strong);
+}
+.deck-group-heading .count {
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+.deck-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.deck-row-count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--font-mono);
+  font-size: var(--fs-200);
+}
+.deck-row-count .count-text {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+button.step {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-300);
+  line-height: 1;
+}
+button.lock {
+  padding: 0 var(--sp-1);
+  font-size: var(--fs-300);
+  background: none;
+}
+button.lock[aria-pressed="true"] {
+  color: var(--accent);
+}

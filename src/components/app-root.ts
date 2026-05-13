@@ -12,12 +12,18 @@
  */
 
 import { CARD_COUNT, CARDS_RELEASE_TAG } from "../data/cards";
-import { setInks } from "../state/deck";
+import { clearDeck, setInks } from "../state/deck";
 import { deckStore } from "../state/index";
 import { totalCards } from "../state/selectors";
 import { buildHash } from "../state/url";
 import { VERSION } from "../version";
-import { InkSelector } from "./ink-selector";
+import "./card-finder";
+import "./deck-list";
+// `InkSelector` is used only as a TypeScript type below, so we also
+// need the side-effect import to ensure the custom element gets
+// registered before <app-root> queries for it.
+import "./ink-selector";
+import type { InkSelector } from "./ink-selector";
 
 import type { InkT } from "@bjorvack/lorcana-schemas";
 
@@ -77,7 +83,7 @@ export class AppRoot extends HTMLElement {
         <ink-selector></ink-selector>
         <span style="flex: 1"></span>
         <button class="secondary" disabled title="Coming in the next commit">Export</button>
-        <button class="ghost" disabled title="Coming in the next commit">Clear deck</button>
+        <button class="ghost" data-role="clear-deck">Clear deck</button>
       </div>
 
       <div class="workspace">
@@ -86,21 +92,21 @@ export class AppRoot extends HTMLElement {
             <h2 id="deck-heading">Deck</h2>
             <span class="count" data-role="deck-count">${totalCards(deckStore.get())} / 60</span>
           </header>
-          <div class="empty-state">
-            <p>Pick your inks above, then add cards from the finder to start building.</p>
-          </div>
+          <deck-list></deck-list>
         </section>
 
         <section class="panel" aria-labelledby="finder-heading">
           <header>
             <h2 id="finder-heading">Card finder</h2>
           </header>
-          <div class="empty-state">
-            <p>Search and filters land in the next commit.</p>
-          </div>
+          <card-finder></card-finder>
         </section>
       </div>
     `;
+    const clear = this.querySelector<HTMLButtonElement>('[data-role="clear-deck"]');
+    clear?.addEventListener("click", () => {
+      deckStore.update((state) => clearDeck(state).state);
+    });
   }
 }
 
