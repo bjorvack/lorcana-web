@@ -25,13 +25,12 @@
     "eslint": "^9.9.0",
     "prettier": "^3.3.0",
     "typescript": "^5.5.0",
+    "typescript-eslint": "^8.59.0",
     "vite": "^5.4.0",
     "vitest": "^2.0.0"
   },
   "engines": {
     "node": ">=20"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "@playwright/browser-chromium"]
-  }
+  "packageManager": "pnpm@10.15.1"
 }

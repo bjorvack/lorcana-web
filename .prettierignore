@@ -1,0 +1,10 @@
+dist
+node_modules
+coverage
+playwright-report
+test-results
+pnpm-lock.yaml
+public/cards.json
+public/model
+DESIGN.md
+README.md
