@@ -14,6 +14,7 @@
 import { removeCard, setCount, toggleLock } from "../state/deck";
 import { deckStore } from "../state/index";
 import { type CardType, type DeckRow, TYPES, deckRows } from "../state/selectors";
+import { bindPreviewTrigger } from "./card-preview";
 
 const TAG = "deck-list";
 
@@ -164,6 +165,7 @@ function buildRow(row: DeckRow): HTMLElement {
   );
 
   li.append(countCtrl, thumbWrap, inkBox, cost, name, lock);
+  bindPreviewTrigger(li, row.card);
   return li;
 }
 

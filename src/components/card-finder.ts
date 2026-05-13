@@ -20,6 +20,7 @@ import { type LogicalCard, logicalCards } from "../data/logical";
 import { addCard } from "../state/deck";
 import { deckStore } from "../state/index";
 import { debounce } from "../utils/debounce";
+import { bindPreviewTrigger } from "./card-preview";
 
 const TAG = "card-finder";
 const PAGE_SIZE = 60;
@@ -250,6 +251,7 @@ export class CardFinder extends HTMLElement {
     controls.append(addBtn);
 
     li.append(thumbWrap, inkBox, cost, nameBox, controls);
+    bindPreviewTrigger(li, printing);
     return li;
   }
 }
