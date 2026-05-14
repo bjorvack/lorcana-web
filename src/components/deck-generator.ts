@@ -20,7 +20,7 @@ import { addCard, clearDeck, toggleLock } from "../state/deck";
 import { deckStore } from "../state/index";
 import { totalCards } from "../state/selectors";
 import { InferenceClient } from "../worker/client";
-import type { GenerateProgressEvent, StyleName } from "../worker/protocol";
+import type { GenerateProgressEvent } from "../worker/protocol";
 
 const TAG = "deck-generator";
 
@@ -49,8 +49,11 @@ export class DeckGenerator extends HTMLElement {
   }
 
   private async handleGenerate(): Promise<void> {
-    const style = (this.querySelector<HTMLSelectElement>('[data-role="style"]')?.value ??
-      "balanced") as StyleName;
+    // Slider is a 0..100 integer; the worker accepts a 0..1 float.
+    const rawSlider = Number(
+      this.querySelector<HTMLInputElement>('[data-role="style"]')?.value ?? 50,
+    );
+    const style = Math.max(0, Math.min(1, rawSlider / 100));
     const state = deckStore.get();
     if (state.inks.length === 0) {
       this.setPhase("error", { error: "Pick at least one ink first." });
@@ -192,16 +195,21 @@ export class DeckGenerator extends HTMLElement {
     this.innerHTML = `
       <div class="deck-generator">
         <label class="generator-style">
-          Style
-          <select data-role="style">
-            <option value="safe">Safe (meta)</option>
-            <option value="balanced" selected>Balanced</option>
-            <option value="brew">Brew (exploratory)</option>
-          </select>
+          <span class="generator-style-label">
+            <span aria-hidden="true">Safe</span>
+            <span class="visually-hidden">Style</span>
+            <span aria-hidden="true">Brew</span>
+          </span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value="50"
+            data-role="style"
+            aria-label="Style: 0 is Safe (meta-faithful), 100 is Brew (exploratory)"
+          />
         </label>
-        <button class="primary" data-role="generate">
-          Generate deck
-        </button>
+        <button class="primary" data-role="generate">Generate deck</button>
         <span class="generator-status" data-role="status"></span>
         <span class="generator-prefill" aria-hidden="true">
           ${total > 0 ? `(${total} pre-picked cards will be kept as a seed)` : ""}

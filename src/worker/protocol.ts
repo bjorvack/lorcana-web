@@ -21,6 +21,12 @@ import type { ArchetypeCentroids, ModelBundle, PlayFrequency } from "../model/bu
 
 export type StyleName = "safe" | "balanced" | "brew";
 
+/** Continuous Style position. 0 = Safe (meta-faithful), 1 = Brew
+ * (exploratory). The 3 named mixes are kept around as convenient
+ * named anchor points (UI labels, presets) but the worker actually
+ * blends along ``styleT`` so the slider is continuous. */
+export type StyleT = number;
+
 export interface InitRequest {
   readonly kind: "init";
   readonly requestId: number;
@@ -41,7 +47,10 @@ export interface GenerateRequest {
   readonly partial: ReadonlyArray<readonly [number, number]>;
   /** 6-dim multi-hot for {amber, amethyst, emerald, ruby, sapphire, steel}. */
   readonly inkMultihot: readonly [number, number, number, number, number, number];
-  readonly style: StyleName;
+  /** Named preset OR a continuous ``[0, 1]`` value. Both supported so
+   * callers without the slider (legacy UI, tests, CLI bench) can keep
+   * using the three-name interface. */
+  readonly style: StyleName | StyleT;
   /** Target deck size. DESIGN.md fixes this at 60 for tournament-legal. */
   readonly targetSize?: number;
   /** Maximum copies of any single card. Constructed cards say 4. */
@@ -122,6 +131,33 @@ export const STYLE_MIXES: Readonly<Record<StyleName, StyleMix>> = {
     temperature: 1.0,
   },
 };
+
+/** Resolve the active mix from a name or a 0..1 slider position.
+ *
+ * Names short-circuit to the preset above. Numeric values are lerp'd
+ * piecewise between (safe → balanced) on ``[0, 0.5]`` and
+ * (balanced → brew) on ``[0.5, 1]``, which gives the UI a slider
+ * whose midpoint always lands on the DESIGN-default balanced mix.
+ * A linear interp would shift the midpoint depending on the spacing
+ * between the two anchor tuples, which is harder to reason about
+ * when tweaking presets later.
+ */
+export function resolveStyleMix(style: StyleName | StyleT): StyleMix {
+  if (typeof style === "string") return STYLE_MIXES[style];
+  const t = Math.min(1, Math.max(0, style));
+  const [a, b, u] =
+    t < 0.5
+      ? [STYLE_MIXES.safe, STYLE_MIXES.balanced, t / 0.5]
+      : [STYLE_MIXES.balanced, STYLE_MIXES.brew, (t - 0.5) / 0.5];
+  const lerp = (x: number, y: number): number => x + (y - x) * u;
+  return {
+    proposalWeight: lerp(a.proposalWeight, b.proposalWeight),
+    evaluatorWeight: lerp(a.evaluatorWeight, b.evaluatorWeight),
+    noveltyWeight: lerp(a.noveltyWeight, b.noveltyWeight),
+    metaPenalty: lerp(a.metaPenalty, b.metaPenalty),
+    temperature: lerp(a.temperature, b.temperature),
+  };
+}
 
 // Re-export bundle types so the worker module doesn't have to import
 // across the model/ boundary directly.

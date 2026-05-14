@@ -10,7 +10,7 @@
 import * as ort from "onnxruntime-web";
 
 import type { GenerateProgressEvent, ModelBundle, WorkerEvent, WorkerRequest } from "./protocol";
-import { STYLE_MIXES } from "./protocol";
+import { resolveStyleMix } from "./protocol";
 
 import { type SearchContext, completeDeck } from "./search";
 
@@ -123,7 +123,7 @@ async function handleGenerate(req: {
   requestId: number;
   partial: ReadonlyArray<readonly [number, number]>;
   inkMultihot: readonly [number, number, number, number, number, number];
-  style: keyof typeof STYLE_MIXES;
+  style: Parameters<typeof resolveStyleMix>[0];
   targetSize?: number;
   maxCopies?: number;
   legalLogicalIds?: Uint8Array;
@@ -131,7 +131,7 @@ async function handleGenerate(req: {
   if (!ctx) {
     throw new Error("worker not initialised; send 'init' first");
   }
-  const styleMix = STYLE_MIXES[req.style];
+  const styleMix = resolveStyleMix(req.style);
   // The main thread may pass a precomputed legality mask (1 byte per
   // logical id) that knows which cards are actually playable in the
   // deck's inks; otherwise fall back to the all-zeros default in ctx
