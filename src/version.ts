@@ -12,7 +12,18 @@
  * installed package's major version matches this value.
  */
 
-export const CARDS_RELEASE_TAG = "cards-v2026.05.14-01";
+export const CARDS_RELEASE_TAG = "cards-v2026.05.13-01";
+
+/**
+ * Optional override: pull ``banlist.json`` + ``rotation.json`` from a
+ * different ``cards-vN`` than the one we pin ``cards.json`` to.
+ *
+ * Banlists and rotations are addressed by ``(setCode, cardNumber)``
+ * so a newer ``cards-vN`` can safely supply them for an older
+ * ``cards.json`` — only the model bundle is sensitive to the cardset
+ * hash. Set to ``null`` to use the same tag as cards.
+ */
+export const LEGALITY_RELEASE_TAG: string | null = "cards-v2026.05.14-01";
 
 // First trained release on tournaments-v0.3.0 (1 046 tournaments,
 // 6 137 decks). Proposal net + per-step evaluator + play_frequency

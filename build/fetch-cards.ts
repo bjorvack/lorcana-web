@@ -91,17 +91,18 @@ export function fetchCards(opts: FetchCardsOptions = {}): Plugin {
     // per invocation — Vite calls `buildStart` for both modes.
     async buildStart() {
       const tag = opts.tag ?? (await readPinnedTag());
+      const legalityTag = (await readLegalityTag()) ?? tag;
       const outDir = opts.outDir ?? resolve(REPO_ROOT, "src", "data");
       const cardsJsonPath = resolve(outDir, "cards.json");
       const cardsMetaPath = resolve(outDir, "cards.meta.ts");
       mkdirSync(outDir, { recursive: true });
 
-      if (await alreadyFresh(cardsMetaPath, tag)) {
+      if (await alreadyFresh(cardsMetaPath, tag, legalityTag)) {
         this.info(`[fetch-cards] using cached ${cardsJsonPath} for ${tag}`);
         return;
       }
 
-      const { cards, sha256, banlist, rotation } = await downloadAndVerify(tag);
+      const { cards, sha256, banlist, rotation } = await downloadAndVerify(tag, legalityTag);
       writeFileSync(cardsJsonPath, JSON.stringify(cards) + "\n", "utf8");
       writeFileSync(resolve(outDir, "banlist.json"), JSON.stringify(banlist) + "\n", "utf8");
       writeFileSync(resolve(outDir, "rotation.json"), JSON.stringify(rotation) + "\n", "utf8");
@@ -109,6 +110,7 @@ export function fetchCards(opts: FetchCardsOptions = {}): Plugin {
         cardsMetaPath,
         renderMeta({
           tag,
+          legalityTag,
           cardSetVersion: cards.cardSetVersion,
           sha256,
           count: cards.cards.length,
@@ -136,16 +138,30 @@ async function readPinnedTag(): Promise<string> {
   return m[1];
 }
 
-async function alreadyFresh(cardsMetaPath: string, tag: string): Promise<boolean> {
+async function readLegalityTag(): Promise<string | null> {
+  const versionPath = resolve(REPO_ROOT, "src", "version.ts");
+  const source = readFileSync(versionPath, "utf8");
+  const nullMatch = source.match(/export\s+const\s+LEGALITY_RELEASE_TAG[^=\n]*=\s*null/);
+  if (nullMatch) return null;
+  const valueMatch = source.match(/export\s+const\s+LEGALITY_RELEASE_TAG[^=\n]*=\s*"([^"]+)"/);
+  return valueMatch?.[1] ?? null;
+}
+
+async function alreadyFresh(
+  cardsMetaPath: string,
+  tag: string,
+  legalityTag: string,
+): Promise<boolean> {
   if (!existsSync(cardsMetaPath)) return false;
   const stat = statSync(cardsMetaPath);
   if (stat.size === 0) return false;
   const content = readFileSync(cardsMetaPath, "utf8");
-  return content.includes(`"${tag}"`);
+  return content.includes(`"${tag}"`) && content.includes(`"${legalityTag}"`);
 }
 
 async function downloadAndVerify(
   tag: string,
+  legalityTag: string,
 ): Promise<{ cards: CardSetT; sha256: string; banlist: BanlistT; rotation: RotationT }> {
   const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.env.NODE_AUTH_TOKEN;
@@ -186,15 +202,20 @@ async function downloadAndVerify(
   // 4. Optional legality assets (banlist.json + rotation.json). Older
   //    cards-vN releases predate these — fall back to empty defaults
   //    so the build still succeeds and the format-aware UI degrades
-  //    to "everything legal".
+  //    to "everything legal". ``legalityTag`` lets us pull these from
+  //    a different release than the one we pin cards to — useful when
+  //    the matching ``model-vN`` was trained on an older ``cards-vN``
+  //    that doesn't yet carry the legality data.
+  const legalityAssets =
+    legalityTag === tag ? release.assets : await fetchReleaseAssets(legalityTag, headers);
   const banlist = await downloadOptionalJson<BanlistT>(
-    release.assets,
+    legalityAssets,
     "banlist.json",
     headers,
     (raw) => Banlist.parse(raw),
   );
   const rotation = await downloadOptionalJson<RotationT>(
-    release.assets,
+    legalityAssets,
     "rotation.json",
     headers,
     (raw) => Rotation.parse(raw),
@@ -206,6 +227,19 @@ async function downloadAndVerify(
     banlist: banlist ?? emptyBanlist(),
     rotation: rotation ?? emptyRotation(parsed),
   };
+}
+
+async function fetchReleaseAssets(
+  tag: string,
+  headers: Record<string, string>,
+): Promise<{ name: string; browser_download_url: string }[]> {
+  const url = `https://api.github.com/repos/${SCRAPER_REPO}/releases/tags/${tag}`;
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    throw new Error(`${url}: HTTP ${res.status} ${res.statusText}`);
+  }
+  return ((await res.json()) as { assets: { name: string; browser_download_url: string }[] })
+    .assets;
 }
 
 async function downloadOptionalJson<T>(
@@ -222,6 +256,7 @@ async function downloadOptionalJson<T>(
 
 function renderMeta(args: {
   tag: string;
+  legalityTag: string;
   cardSetVersion: string;
   sha256: string;
   count: number;
@@ -233,6 +268,7 @@ function renderMeta(args: {
     " */",
     "",
     `export const CARDS_RELEASE_TAG = "${args.tag}";`,
+    `export const LEGALITY_RELEASE_TAG = "${args.legalityTag}";`,
     `export const CARD_SET_VERSION = "${args.cardSetVersion}";`,
     `export const CARDS_JSON_SHA256 = "sha256:${args.sha256}";`,
     `export const CARD_COUNT = ${args.count};`,
