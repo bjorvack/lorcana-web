@@ -398,23 +398,20 @@ function pickSeedCard(
 }
 
 export async function scoreRealism(ctx: SearchContext, partial: PartialDeck): Promise<number> {
-  // Approximate: take 8 random card-positions, for each evaluate
-  // "if this card were the next pick, how plausible?". Averaging
-  // these is good enough for a UI pill; the full leave-one-out
-  // pass would do 60 evaluator runs which is fine on CPU but extra
-  // wall-clock for no UX benefit.
+  // Score every card position in the deck. For a 60-card deck that's
+  // a single batch=60 evaluator call — fast on CPU, instant on
+  // WebGPU. The earlier random-sample approximation drew 8 positions
+  // via ``Math.random()`` and so produced a different score on every
+  // call, which made the post-Generate ``"Realism N%"`` status and
+  // the live-realism pill disagree on the same deck.
   const ids: number[] = [];
   for (const [id, count] of partial.counts) {
     for (let i = 0; i < count; i++) ids.push(id);
   }
   if (ids.length === 0) return 0;
 
-  const sampleSize = Math.min(8, ids.length);
-  const samples: number[] = [];
-  for (let i = 0; i < sampleSize; i++) {
-    samples.push(ids[Math.floor(Math.random() * ids.length)]!);
-  }
-  const candidateIds = new BigInt64Array(samples.map((x) => BigInt(x)));
+  const sampleSize = ids.length;
+  const candidateIds = new BigInt64Array(ids.map((x) => BigInt(x)));
   const partialBatch = expandPartialBatch(partial, sampleSize);
   const out = await ctx.evaluatorSession.run({
     partial_ids: partialBatch,
