@@ -16,7 +16,7 @@ import { computeMaxCopies, type CardT, type InkT } from "@bjorvack/lorcana-schem
 import { cardsById } from "../data/cards";
 import { loadModelBundle } from "../model/bundle";
 import { loadVocabMap, type VocabMap } from "../model/vocab";
-import { addCard, clearDeck } from "../state/deck";
+import { addCard, clearDeck, toggleLock } from "../state/deck";
 import { deckStore } from "../state/index";
 import { totalCards } from "../state/selectors";
 import { InferenceClient } from "../worker/client";
@@ -75,11 +75,15 @@ export class DeckGenerator extends HTMLElement {
       if (!this.#vocab) this.#vocab = await loadVocabMap();
 
       // Map the user's partial (printing ids) to logical indices.
+      // Locked rows go into the partial too; the model conditions
+      // on them and the post-pass below restores the lock flags so
+      // a Generate click never displaces a card the user pinned.
       const partial: [number, number][] = [];
       for (const [printingId, count] of state.cards) {
         const logical = this.#vocab.printingToLogical.get(printingId);
         if (logical !== undefined) partial.push([logical, count]);
       }
+      const lockedPrintingIds = new Set(state.locks);
 
       // 6-dim ink multi-hot in the canonical order the model expects.
       const inkMultihot = INK_ORDER.map((name) =>
@@ -108,10 +112,11 @@ export class DeckGenerator extends HTMLElement {
       });
 
       // Replace the deck wholesale: the model's pick set is the new
-      // truth. Locked rows are *not* preserved yet; that's a follow-up
-      // (deck-state needs an "addCardsBatch" reducer + a lock-aware
-      // generate path).
-      this.applyGeneratedDeck(deck);
+      // truth. Locks are preserved across the swap: anything the user
+      // pinned before Generate stays pinned after (and was already
+      // in the model's partial, so its count is guaranteed to be at
+      // least its locked count).
+      this.applyGeneratedDeck(deck, lockedPrintingIds);
       this.#lastRealism = realism;
       this.setPhase("done", { progress: `Done. Realism ${(realism * 100).toFixed(0)}%.` });
     } catch (e) {
@@ -120,7 +125,10 @@ export class DeckGenerator extends HTMLElement {
     }
   }
 
-  private applyGeneratedDeck(deck: ReadonlyArray<readonly [number, number]>): void {
+  private applyGeneratedDeck(
+    deck: ReadonlyArray<readonly [number, number]>,
+    lockedPrintingIds: ReadonlySet<string>,
+  ): void {
     if (!this.#vocab) return;
     // Wipe the deck then add each pick — keeps the addCard reducer
     // doing its max-copies/ink-validity checks rather than bypassing
@@ -136,6 +144,18 @@ export class DeckGenerator extends HTMLElement {
         const cap = Math.min(count, computeMaxCopies(card));
         if (cap > 0) {
           next = addCard(next, printingId, cap).state;
+        }
+      }
+      // Restore locks for any pinned printing that survived the
+      // regenerate. ``toggleLock`` is a no-op for cards not in the
+      // current deck, so a lock on a card the model dropped is
+      // silently lost — that's fine, locks were a per-card pin and
+      // the card is no longer here. The common case (locked card
+      // was in the partial seed → model kept it → lock restored)
+      // is what makes this a true preservation.
+      for (const printingId of lockedPrintingIds) {
+        if (next.cards.has(printingId)) {
+          next = toggleLock(next, printingId).state;
         }
       }
       return next;
