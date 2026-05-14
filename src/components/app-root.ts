@@ -14,15 +14,18 @@
 import { CARD_COUNT, CARDS_RELEASE_TAG } from "../data/cards";
 import type { Format } from "../data/legality";
 import { clearDeck, setFormat, setInks } from "../state/deck";
-import { deckStore } from "../state/index";
+import { deckStore, initialWarnings } from "../state/index";
 import { totalCards } from "../state/selectors";
 import { buildHash } from "../state/url";
 import { VERSION } from "../version";
+import "./banner";
+import type { AppBanner } from "./banner";
 import "./card-finder";
 import "./deck-export";
 import "./deck-generator";
 import "./deck-list";
 import "./format-selector";
+import "./mana-curve";
 import type { FormatSelector } from "./format-selector";
 // `InkSelector` is used only as a TypeScript type below, so we also
 // need the side-effect import to ensure the custom element gets
@@ -50,6 +53,10 @@ export class AppRoot extends HTMLElement {
     if (formatSelector) {
       formatSelector.selected = deckStore.get().format;
       formatSelector.addEventListener("format-changed", this.handleFormatChanged);
+    }
+    if (initialWarnings.length > 0) {
+      const banner = this.querySelector<AppBanner>("app-banner");
+      banner?.showMany(initialWarnings, "warning");
     }
 
     this.#unsubscribe = deckStore.subscribe((state) => {
@@ -100,6 +107,8 @@ export class AppRoot extends HTMLElement {
         </span>
       </header>
 
+      <app-banner hidden></app-banner>
+
       <div class="action-bar">
         <ink-selector></ink-selector>
         <format-selector></format-selector>
@@ -115,6 +124,7 @@ export class AppRoot extends HTMLElement {
             <h2 id="deck-heading">Deck</h2>
             <span class="count" data-role="deck-count">${totalCards(deckStore.get())} / 60</span>
           </header>
+          <mana-curve></mana-curve>
           <deck-list></deck-list>
         </section>
 

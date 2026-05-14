@@ -648,3 +648,47 @@ format-selector {
 .deck-export .export-status.error {
   color: var(--ink-ruby, #c33);
 }
+
+/* --- banner ------------------------------------------------ */
+.app-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid;
+  margin: 0.5rem 0;
+}
+.app-banner[hidden] {
+  display: none;
+}
+.app-banner-body {
+  flex: 1;
+  font-size: var(--fs-200);
+}
+.app-banner .banner-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.app-banner-info {
+  background: rgba(106, 163, 255, 0.08);
+  border-color: rgba(106, 163, 255, 0.35);
+}
+.app-banner-warning {
+  background: rgba(251, 192, 45, 0.1);
+  border-color: rgba(251, 192, 45, 0.4);
+}
+.app-banner-error {
+  background: rgba(229, 57, 53, 0.1);
+  border-color: rgba(229, 57, 53, 0.5);
+}
+
+/* --- mana curve -------------------------------------------- */
+mana-curve {
+  display: block;
+  margin: 0 0 0.6rem;
+}
+.mana-curve-canvas {
+  width: 100%;
+  display: block;
+}
