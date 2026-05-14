@@ -55,6 +55,24 @@ export class CardPreview extends HTMLElement {
     const card = this.#card;
     const box = this.querySelector(".card-preview-box");
     if (!box || !card) return;
+    // Optional rich fields exposed in schemas 0.6.0. They're nullable
+    // on older fixtures, so guard each one independently rather than
+    // build a single conditional that disappears if any one is missing.
+    const c = card as CardT & {
+      rarity?: string | null;
+      setName?: string | null;
+      collectorNumber?: string | null;
+      illustrators?: readonly string[];
+      releasedAt?: string | null;
+      tcgplayerId?: number | null;
+    };
+    const collector = c.collectorNumber ?? null;
+    const setLine = [c.setName ?? null, collector ? `#${collector}` : null]
+      .filter((x): x is string => Boolean(x))
+      .join(" · ");
+    const illustrators = (c.illustrators ?? []).filter(Boolean).join(", ");
+    const buyHref = c.tcgplayerId ? `https://www.tcgplayer.com/product/${c.tcgplayerId}` : null;
+
     box.innerHTML = `
       <img
         class="card-preview-img"
@@ -62,15 +80,21 @@ export class CardPreview extends HTMLElement {
         alt="${escapeHtml(`${card.name}${card.version ? ` — ${card.version}` : ""}`)}"
       />
       <div class="card-preview-body">
-        <h3>${escapeHtml(card.name)}${card.version ? ` — ${escapeHtml(card.version)}` : ""}</h3>
+        <h3>${escapeHtml(card.name)}${card.version ? ` <span class="card-preview-version">${escapeHtml(card.version)}</span>` : ""}</h3>
         <p class="card-preview-line">
           <strong>${card.cost}</strong> ink ·
           ${card.inks.join(" / ")} ·
           ${card.types.join(" / ")}
+          ${c.rarity ? ` · <span class="card-preview-rarity">${escapeHtml(c.rarity)}</span>` : ""}
         </p>
+        ${setLine ? `<p class="card-preview-set">${escapeHtml(setLine)}</p>` : ""}
         ${card.text ? `<p class="card-preview-text">${escapeHtml(card.text)}</p>` : ""}
         ${card.flavor ? `<p class="card-preview-flavor">${escapeHtml(card.flavor)}</p>` : ""}
-        <button class="ghost" data-role="preview-close" aria-label="Close preview">Close</button>
+        ${illustrators ? `<p class="card-preview-illustrator">Art by ${escapeHtml(illustrators)}</p>` : ""}
+        <div class="card-preview-actions">
+          ${buyHref ? `<a class="secondary card-preview-buy" href="${buyHref}" target="_blank" rel="noopener">View on TCGPlayer</a>` : ""}
+          <button class="ghost" data-role="preview-close" aria-label="Close preview">Close</button>
+        </div>
       </div>
     `;
   }

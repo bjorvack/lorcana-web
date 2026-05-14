@@ -1,39 +1,62 @@
 /*
  * Design tokens: every color, spacing, and typography value used by
- * the components is a variable on :root so we can dark-mode and
- * theme without touching component CSS.
+ * the components is a variable on :root so we can theme without
+ * touching component CSS. Inspired by the original `lorcana-deck-
+ * generator` look-and-feel — dark backdrop, gold accents, glass-
+ * morphism panels.
+ *
+ * Dark is the default scheme; ``prefers-color-scheme: light`` opts
+ * into a lighter palette that keeps the same gold accent so the
+ * Lorcana identity reads in either mode.
  */
 
 :root {
-  /* Lorcana ink palette. Light mode values; the dark scheme below
-     adjusts where readability suffers. These are the only six colors
-     the UI uses for ink-specific decoration. */
-  --ink-amber: #f5b945;
-  --ink-amethyst: #9e5fbf;
-  --ink-emerald: #3fa86b;
-  --ink-ruby: #d94a4a;
-  --ink-sapphire: #4a8ad9;
-  --ink-steel: #8a9099;
+  /* Lorcana ink palette. Slightly more saturated than v1 so the
+     ink chips read well against the new charcoal background. */
+  --ink-amber: #f5b202;
+  --ink-amethyst: #81377b;
+  --ink-emerald: #2a8934;
+  --ink-ruby: #d3082f;
+  --ink-sapphire: #0189c4;
+  --ink-steel: #9fa8b4;
 
-  /* Neutrals. */
-  --bg: #f7f7f8;
-  --bg-elevated: #ffffff;
-  --bg-subtle: #efeff2;
-  --text: #1f2024;
-  --text-muted: #6b7280;
-  --border: #e1e3e8;
-  --border-strong: #c9ccd2;
-  --shadow-sm: 0 1px 2px rgba(15, 17, 22, 0.06);
-  --shadow-md: 0 4px 12px rgba(15, 17, 22, 0.08);
+  /* Gold accent — the visual signature of the Lorcana brand. Used
+     for headings, focused interactive elements, and the primary
+     button gradient. */
+  --gold: #d3ba84;
+  --gold-light: #e3caa8;
+  --gold-dark: #b9a270;
 
-  /* Accents. */
-  --accent: var(--ink-sapphire);
-  --accent-text: #ffffff;
+  /* Dark backdrop. ``bg`` is the page background, ``bg-elevated``
+     is the panel surface (frosted glass), ``bg-subtle`` is the
+     inset background for things like the search input. */
+  --bg: #0a0a0a;
+  --bg-elevated: rgba(30, 30, 30, 0.78);
+  --bg-subtle: rgba(255, 255, 255, 0.05);
+  --bg-glass: rgba(255, 255, 255, 0.04);
+  --text: #f5f5f7;
+  --text-muted: #a0a0a0;
+  --border: rgba(211, 186, 132, 0.18);
+  --border-strong: rgba(211, 186, 132, 0.55);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 24px rgba(211, 186, 132, 0.28);
 
-  /* Typography. */
+  /* Accent that primary buttons + focus rings ride on. Gold pops
+     against the dark backdrop; sapphire is the legacy fallback
+     used by a few semantic spots that need cooler colour
+     (e.g. realism pill "mid" band). */
+  --accent: var(--gold);
+  --accent-text: #14110b;
+
+  /* Typography. System fallback stacks — no Google Fonts so the
+     consent banner can stay honest about "no third-party requests
+     before opt-in". The ``font-display`` family keeps the playful
+     character that Baloo 2 carried in v1 without the CDN call. */
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    "Noto Sans", sans-serif, "Apple Color Emoji";
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, "Noto Sans",
+    sans-serif;
+  --font-display: "Trebuchet MS", "Avenir Next", "Avenir", "Segoe UI", system-ui, sans-serif;
   --font-mono:
     ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --fs-100: 0.75rem;
@@ -42,6 +65,7 @@
   --fs-400: 1.125rem;
   --fs-500: 1.375rem;
   --fs-600: 1.75rem;
+  --fs-700: 2.5rem;
 
   /* Spacing scale (4 px base). */
   --sp-1: 0.25rem;
@@ -54,37 +78,60 @@
 
   /* Misc. */
   --radius-sm: 6px;
-  --radius-md: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-pill: 999px;
   --transition-fast: 120ms ease-out;
+  --transition-normal: 220ms ease-out;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14161a;
-    --bg-elevated: #1c1f25;
-    --bg-subtle: #23262e;
-    --text: #e7e9ee;
-    --text-muted: #9ba2ad;
-    --border: #2c3038;
-    --border-strong: #3f444f;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.4);
+/* Light mode is an explicit opt-in (``<html data-theme="light">``)
+   rather than a ``prefers-color-scheme`` follow. Lorcana's identity
+   is gold-on-charcoal; following the OS into a washed-out cream
+   palette undermines that. We'll wire a toggle to switch when the
+   user wants it. */
+html[data-theme="light"] {
+  --bg: #f7f5ef;
+  --bg-elevated: rgba(255, 255, 255, 0.88);
+  --bg-subtle: rgba(0, 0, 0, 0.04);
+  --bg-glass: rgba(255, 255, 255, 0.6);
+  --text: #1f1a12;
+  --text-muted: #6b5e4a;
+  --border: rgba(185, 162, 112, 0.32);
+  --border-strong: rgba(185, 162, 112, 0.65);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 24px rgba(211, 186, 132, 0.45);
+  --accent-text: #14110b;
+}
 
-    /* Slightly tone down the saturated inks so they don't vibrate
-       against a dark background. */
-    --ink-amber: #f5c462;
-    --ink-amethyst: #b078d0;
-    --ink-emerald: #4fb87a;
-    --ink-ruby: #e06464;
-    --ink-sapphire: #6ba2e0;
-    --ink-steel: #a6acb6;
-  }
+html,
+body {
+  background:
+    radial-gradient(1200px 700px at 50% -200px, rgba(211, 186, 132, 0.08), transparent 60%),
+    linear-gradient(160deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 85%, black) 100%);
+  background-attachment: fixed;
+  min-height: 100%;
 }
 
 body {
   font-family: var(--font-sans);
   font-size: var(--fs-300);
-  background: var(--bg);
   color: var(--text);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+h1 {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 60%, var(--gold-dark) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
 }
