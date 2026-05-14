@@ -13,6 +13,7 @@
 import { isTournamentLegal, type CardT } from "@bjorvack/lorcana-schemas";
 
 import { cardsById } from "../data/cards";
+import { banlist, rotation } from "../data/legality";
 import type { DeckState } from "./deck";
 
 export const TYPES = ["Character", "Action", "Song", "Item", "Location"] as const;
@@ -112,6 +113,7 @@ export function validity(state: DeckState): DeckValidity {
   const result = isTournamentLegal(
     { inks: [...state.inks], cards },
     cardsById as Map<string, CardT>,
+    { banlist, rotation, format: state.format },
   );
   if (result.ok) return { ok: true, reasons: [] };
   return { ok: false, reasons: result.reasons };

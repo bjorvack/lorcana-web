@@ -12,7 +12,8 @@
  */
 
 import { CARD_COUNT, CARDS_RELEASE_TAG } from "../data/cards";
-import { clearDeck, setInks } from "../state/deck";
+import type { Format } from "../data/legality";
+import { clearDeck, setFormat, setInks } from "../state/deck";
 import { deckStore } from "../state/index";
 import { totalCards } from "../state/selectors";
 import { buildHash } from "../state/url";
@@ -20,6 +21,8 @@ import { VERSION } from "../version";
 import "./card-finder";
 import "./deck-generator";
 import "./deck-list";
+import "./format-selector";
+import type { FormatSelector } from "./format-selector";
 // `InkSelector` is used only as a TypeScript type below, so we also
 // need the side-effect import to ensure the custom element gets
 // registered before <app-root> queries for it.
@@ -42,9 +45,18 @@ export class AppRoot extends HTMLElement {
       inkSelector.selected = deckStore.get().inks;
       inkSelector.addEventListener("inks-changed", this.handleInksChanged);
     }
+    const formatSelector = this.querySelector<FormatSelector>("format-selector");
+    if (formatSelector) {
+      formatSelector.selected = deckStore.get().format;
+      formatSelector.addEventListener("format-changed", this.handleFormatChanged);
+    }
 
     this.#unsubscribe = deckStore.subscribe((state) => {
       this.updateDeckCount(totalCards(state));
+      // Keep the chip pressed-state in sync when the format is
+      // changed via URL hash / external means.
+      const fs = this.querySelector<FormatSelector>("format-selector");
+      if (fs && fs.selected !== state.format) fs.selected = state.format;
       // Reflect deck state in the URL hash without piling up history
       // entries — replaceState rather than pushState.
       const hash = buildHash(state);
@@ -59,11 +71,18 @@ export class AppRoot extends HTMLElement {
     this.#unsubscribe?.();
     const inkSelector = this.querySelector<InkSelector>("ink-selector");
     inkSelector?.removeEventListener("inks-changed", this.handleInksChanged);
+    const formatSelector = this.querySelector<FormatSelector>("format-selector");
+    formatSelector?.removeEventListener("format-changed", this.handleFormatChanged);
   }
 
   private handleInksChanged = (event: Event): void => {
     const inks = (event as CustomEvent<{ inks: InkT[] }>).detail.inks;
     deckStore.update((state) => setInks(state, inks).state);
+  };
+
+  private handleFormatChanged = (event: Event): void => {
+    const format = (event as CustomEvent<{ format: Format }>).detail.format;
+    deckStore.update((state) => setFormat(state, format).state);
   };
 
   private updateDeckCount(total: number): void {
@@ -82,6 +101,7 @@ export class AppRoot extends HTMLElement {
 
       <div class="action-bar">
         <ink-selector></ink-selector>
+        <format-selector></format-selector>
         <span style="flex: 1"></span>
         <deck-generator></deck-generator>
         <button class="secondary" disabled title="Coming in the next commit">Export</button>

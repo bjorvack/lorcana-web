@@ -29,8 +29,49 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync } from "no
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { CardSet, type CardSetT } from "@bjorvack/lorcana-schemas";
+import {
+  Banlist,
+  CardSet,
+  Rotation,
+  type BanlistT,
+  type CardSetT,
+  type RotationT,
+} from "@bjorvack/lorcana-schemas";
 import type { Plugin } from "vite";
+
+// Empty defaults shipped when a cards-vN release predates the
+// legality assets. The format-aware UI then degrades gracefully:
+// every card is "legal" and no bans/rotations apply.
+function emptyBanlist(): BanlistT {
+  return {
+    generatedAt: new Date(0).toISOString(),
+    sourceUrl: "about:blank",
+    schemaVersion: "0.5.0",
+    formats: { core_constructed: [], infinity_constructed: [] },
+  };
+}
+function emptyRotation(cards: CardSetT): RotationT {
+  // The schema requires at least one block, and ``coreLegalSetCodes``
+  // returns *only* setCodes belonging to a non-rotated block. To keep
+  // every real card Core-legal until the scraper ships a real rotation,
+  // we synthesise a single far-future block that covers every setCode
+  // present in the just-downloaded cards.json.
+  const setCodes = [...new Set(cards.cards.map((c) => c.setCode))].sort();
+  return {
+    generatedAt: new Date(0).toISOString(),
+    sourceUrl: "about:blank",
+    schemaVersion: "0.5.0",
+    blocks: [
+      {
+        name: "placeholder",
+        setCodes: setCodes.length > 0 ? setCodes : ["999"],
+        releaseDate: "1970-01-01",
+        rotationDate: "9999-12-31",
+      },
+    ],
+    coreConstructedCutoffMonths: 24,
+  };
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "..");
@@ -60,8 +101,10 @@ export function fetchCards(opts: FetchCardsOptions = {}): Plugin {
         return;
       }
 
-      const { cards, sha256 } = await downloadAndVerify(tag);
+      const { cards, sha256, banlist, rotation } = await downloadAndVerify(tag);
       writeFileSync(cardsJsonPath, JSON.stringify(cards) + "\n", "utf8");
+      writeFileSync(resolve(outDir, "banlist.json"), JSON.stringify(banlist) + "\n", "utf8");
+      writeFileSync(resolve(outDir, "rotation.json"), JSON.stringify(rotation) + "\n", "utf8");
       writeFileSync(
         cardsMetaPath,
         renderMeta({
@@ -101,7 +144,9 @@ async function alreadyFresh(cardsMetaPath: string, tag: string): Promise<boolean
   return content.includes(`"${tag}"`);
 }
 
-async function downloadAndVerify(tag: string): Promise<{ cards: CardSetT; sha256: string }> {
+async function downloadAndVerify(
+  tag: string,
+): Promise<{ cards: CardSetT; sha256: string; banlist: BanlistT; rotation: RotationT }> {
   const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.env.NODE_AUTH_TOKEN;
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -137,7 +182,42 @@ async function downloadAndVerify(tag: string): Promise<{ cards: CardSetT; sha256
   // 3. Schema-validate. Throwing a zod ZodError here surfaces the
   //    exact rejected fields in the build output.
   const parsed = CardSet.parse(JSON.parse(payload));
-  return { cards: parsed, sha256: gotSha };
+
+  // 4. Optional legality assets (banlist.json + rotation.json). Older
+  //    cards-vN releases predate these — fall back to empty defaults
+  //    so the build still succeeds and the format-aware UI degrades
+  //    to "everything legal".
+  const banlist = await downloadOptionalJson<BanlistT>(
+    release.assets,
+    "banlist.json",
+    headers,
+    (raw) => Banlist.parse(raw),
+  );
+  const rotation = await downloadOptionalJson<RotationT>(
+    release.assets,
+    "rotation.json",
+    headers,
+    (raw) => Rotation.parse(raw),
+  );
+
+  return {
+    cards: parsed,
+    sha256: gotSha,
+    banlist: banlist ?? emptyBanlist(),
+    rotation: rotation ?? emptyRotation(parsed),
+  };
+}
+
+async function downloadOptionalJson<T>(
+  assets: { name: string; browser_download_url: string }[],
+  name: string,
+  headers: Record<string, string>,
+  parse: (raw: unknown) => T,
+): Promise<T | null> {
+  const asset = assets.find((a) => a.name === name);
+  if (!asset) return null;
+  const text = await (await fetch(asset.browser_download_url, { headers })).text();
+  return parse(JSON.parse(text));
 }
 
 function renderMeta(args: {

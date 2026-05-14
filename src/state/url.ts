@@ -28,8 +28,19 @@
 
 import { type InkT, InkValues } from "@bjorvack/lorcana-schemas";
 
+import { defaultFormat, type Format } from "../data/legality";
 import type { DeckState } from "./deck";
 import { emptyDeck } from "./deck";
+
+// Short tokens in the URL are nicer than the verbose enum literals.
+const FORMAT_TO_TOKEN: Record<Format, string> = {
+  core_constructed: "core",
+  infinity_constructed: "infinity",
+};
+const TOKEN_TO_FORMAT: Record<string, Format> = {
+  core: "core_constructed",
+  infinity: "infinity_constructed",
+};
 
 const INK_BY_KEBAB = new Map<string, InkT>(InkValues.map((i) => [i.toLowerCase(), i]));
 
@@ -37,6 +48,7 @@ export interface SerialisedDeck {
   readonly inks?: string;
   readonly deck?: string;
   readonly locks?: string;
+  readonly format?: string;
 }
 
 // --- public API -------------------------------------------------
@@ -47,10 +59,16 @@ export function serialiseDeck(state: DeckState): SerialisedDeck {
   for (const [id, count] of state.cards) deckEntries.push(`${id}:${count}`);
   const deck = deckEntries.length > 0 ? encodeBase64Url(deckEntries.join(",")) : undefined;
   const locks = state.locks.size > 0 ? encodeBase64Url([...state.locks].join(",")) : undefined;
+  // Only emit ``format`` when it differs from the boot-time default
+  // so plain links stay short; defaultFormat is stable across loads
+  // for the same calendar day.
+  const fmtToken = FORMAT_TO_TOKEN[state.format];
+  const format = fmtToken !== FORMAT_TO_TOKEN[defaultFormat()] ? fmtToken : undefined;
   return {
     inks,
     ...(deck !== undefined ? { deck } : {}),
     ...(locks !== undefined ? { locks } : {}),
+    ...(format !== undefined ? { format } : {}),
   };
 }
 
@@ -60,6 +78,7 @@ export function buildHash(state: DeckState): string {
   if (s.inks) params.set("inks", s.inks);
   if (s.deck) params.set("deck", s.deck);
   if (s.locks) params.set("locks", s.locks);
+  if (s.format) params.set("format", s.format);
   const str = params.toString();
   return str ? `#${str}` : "";
 }
@@ -71,10 +90,12 @@ export function parseHash(hash: string): SerialisedDeck {
   const inks = params.get("inks") ?? undefined;
   const deck = params.get("deck") ?? undefined;
   const locks = params.get("locks") ?? undefined;
+  const format = params.get("format") ?? undefined;
   return {
     ...(inks ? { inks } : {}),
     ...(deck ? { deck } : {}),
     ...(locks ? { locks } : {}),
+    ...(format ? { format } : {}),
   };
 }
 
@@ -117,7 +138,14 @@ export function applyHash(hash: string): { state: DeckState; warnings: readonly 
     else for (const id of decoded.split(",")) if (id) locks.add(id);
   }
 
-  return { state: { ...emptyDeck(inks), cards, locks }, warnings };
+  let format: Format = defaultFormat();
+  if (parsed.format) {
+    const mapped = TOKEN_TO_FORMAT[parsed.format.toLowerCase()];
+    if (mapped) format = mapped;
+    else warnings.push(`Unknown format="${parsed.format}"; using default`);
+  }
+
+  return { state: { ...emptyDeck(inks, format), cards, locks }, warnings };
 }
 
 // --- base64url --------------------------------------------------

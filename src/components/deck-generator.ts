@@ -14,6 +14,7 @@
 import { computeMaxCopies, type CardT, type InkT } from "@bjorvack/lorcana-schemas";
 
 import { cardsById } from "../data/cards";
+import { isLegalNow, type Format } from "../data/legality";
 import { loadModelBundle } from "../model/bundle";
 import { loadVocabMap, type VocabMap } from "../model/vocab";
 import { addCard, clearDeck, toggleLock } from "../state/deck";
@@ -99,7 +100,7 @@ export class DeckGenerator extends HTMLElement {
       // addCard accept this?" check lives here. The worker treats a
       // zero entry as excluded, so we can't lose cards to silent
       // out-of-ink rejection downstream.
-      const legalLogicalIds = buildLegalLogicalIds(this.#vocab, state.inks);
+      const legalLogicalIds = buildLegalLogicalIds(this.#vocab, state.inks, state.format);
 
       this.setPhase("generating", { progress: "Calling the model…" });
       // Lorcana's actual rule is "at least 60 cards"; tournament-grade
@@ -229,7 +230,11 @@ export class DeckGenerator extends HTMLElement {
  * mask are guaranteed to land in the deck rather than being silently
  * rejected.
  */
-function buildLegalLogicalIds(vocab: VocabMap, deckInks: readonly InkT[]): Uint8Array {
+function buildLegalLogicalIds(
+  vocab: VocabMap,
+  deckInks: readonly InkT[],
+  format: Format,
+): Uint8Array {
   // +1 for the PAD slot at index 0; we never set it to 1.
   const vocabSize = vocab.entries.length;
   const out = new Uint8Array(vocabSize);
@@ -238,9 +243,11 @@ function buildLegalLogicalIds(vocab: VocabMap, deckInks: readonly InkT[]): Uint8
     if (entry.index <= 0 || entry.index >= vocabSize) continue;
     const card = cardsById.get(entry.canonicalPrintingId);
     if (!card) continue;
-    if (card.inks.every((i) => inkSet.has(i))) {
-      out[entry.index] = 1;
-    }
+    if (!card.inks.every((i) => inkSet.has(i))) continue;
+    // Intersect with the active format's legal set so the model
+    // never proposes a banned / rotated-out / unreleased card.
+    if (!isLegalNow(card, format)) continue;
+    out[entry.index] = 1;
   }
   return out;
 }

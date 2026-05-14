@@ -11,9 +11,11 @@
  * affordance to the user.
  */
 
+import { cardLegality, type Format } from "../data/legality";
 import { removeCard, setCount, toggleLock } from "../state/deck";
 import { deckStore } from "../state/index";
 import { type CardType, type DeckRow, TYPES, deckRows } from "../state/selectors";
+import { buildLegalityDot } from "./card-finder";
 import { bindPreviewTrigger } from "./card-preview";
 
 const TAG = "deck-list";
@@ -58,7 +60,7 @@ export class DeckList extends HTMLElement {
     for (const type of TYPES) {
       const group = grouped.get(type) ?? [];
       if (group.length === 0) continue;
-      container.append(buildGroup(type, group));
+      container.append(buildGroup(type, group, state.format));
     }
     this.replaceChildren(container);
   }
@@ -78,7 +80,7 @@ function groupByType(rows: readonly DeckRow[]): Map<CardType, DeckRow[]> {
   return out;
 }
 
-function buildGroup(type: CardType, rows: readonly DeckRow[]): HTMLElement {
+function buildGroup(type: CardType, rows: readonly DeckRow[], format: Format): HTMLElement {
   const wrap = document.createElement("section");
   wrap.className = "deck-group";
 
@@ -91,13 +93,13 @@ function buildGroup(type: CardType, rows: readonly DeckRow[]): HTMLElement {
   const ul = document.createElement("ul");
   ul.className = "deck-rows";
   ul.setAttribute("role", "list");
-  for (const row of rows) ul.append(buildRow(row));
+  for (const row of rows) ul.append(buildRow(row, format));
   wrap.append(ul);
 
   return wrap;
 }
 
-function buildRow(row: DeckRow): HTMLElement {
+function buildRow(row: DeckRow, format: Format): HTMLElement {
   const li = document.createElement("li");
   li.className = "deck-row";
 
@@ -150,9 +152,13 @@ function buildRow(row: DeckRow): HTMLElement {
   cost.setAttribute("aria-label", `${row.card.cost} ink`);
   cost.textContent = String(row.card.cost);
 
+  const nameLine = document.createElement("span");
+  nameLine.className = "card-row-nameline";
+  nameLine.append(buildLegalityDot(cardLegality(row.card, format)));
   const name = document.createElement("span");
   name.className = "card-row-name";
   name.textContent = row.card.version ? `${row.card.name} — ${row.card.version}` : row.card.name;
+  nameLine.append(name);
 
   const lock = document.createElement("button");
   lock.type = "button";
@@ -164,7 +170,7 @@ function buildRow(row: DeckRow): HTMLElement {
     deckStore.update((state) => toggleLock(state, row.card.id).state),
   );
 
-  li.append(countCtrl, thumbWrap, inkBox, cost, name, lock);
+  li.append(countCtrl, thumbWrap, inkBox, cost, nameLine, lock);
   bindPreviewTrigger(li, row.card);
   return li;
 }

@@ -22,7 +22,7 @@ export const CARDS_RELEASE_TAG = "cards-v2026.05.13-01";
 // Bump this in lock-step with CARDS_RELEASE_TAG: the build's
 // fetch-model plugin enforces that the model's cardSetVersion
 // equals the cards.json's cardSetVersion or the build fails.
-export const MODEL_RELEASE_TAG: string | null = "model-v0.1.0";
+export const MODEL_RELEASE_TAG: string | null = "model-v0.2.0";
 
 export const EXPECTED_SCHEMA_MAJOR = 0;
 

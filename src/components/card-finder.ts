@@ -14,8 +14,9 @@
  * downloads what's actually on screen.
  */
 
-import { computeMaxCopies, type CardT } from "@bjorvack/lorcana-schemas";
+import { computeMaxCopies, type CardT, type LegalityStatus } from "@bjorvack/lorcana-schemas";
 
+import { cardLegality } from "../data/legality";
 import { type LogicalCard, logicalCards } from "../data/logical";
 import { addCard } from "../state/deck";
 import { deckStore } from "../state/index";
@@ -48,6 +49,7 @@ export class CardFinder extends HTMLElement {
   #query = "";
   #pageCount = 1;
   #selectedPrintingId = new Map<string, string>(); // logicalId -> printing id
+  #showIllegal = false;
   #unsubscribe?: () => void;
 
   connectedCallback(): void {
@@ -66,7 +68,7 @@ export class CardFinder extends HTMLElement {
   }, 80);
 
   private filterMatches(): readonly LogicalCard[] {
-    const { inks } = deckStore.get();
+    const { inks, format } = deckStore.get();
     const inkSet = new Set(inks);
     const q = this.#query;
     const out: LogicalCard[] = [];
@@ -76,6 +78,11 @@ export class CardFinder extends HTMLElement {
       // because variants of the same logical card never differ here.
       if (!logical.canonical.inks.every((i) => inkSet.has(i))) continue;
       if (q && !haystack.includes(q)) continue;
+      // Hide cards that aren't legal in the active format unless the
+      // user explicitly toggled the override.
+      if (!this.#showIllegal && cardLegality(logical.canonical, format) !== "legal") {
+        continue;
+      }
       out.push(logical);
     }
     out.sort((a, b) => {
@@ -109,11 +116,24 @@ export class CardFinder extends HTMLElement {
           aria-label="Search cards"
         />
       </label>
+      <label class="card-finder-toggle">
+        <input type="checkbox" data-role="show-illegal" />
+        <span>Show illegal cards</span>
+      </label>
       <div class="card-finder-results" aria-live="polite"></div>
       <div class="card-finder-footer"></div>
     `;
     const input = this.querySelector<HTMLInputElement>('input[type="search"]');
     input?.addEventListener("input", (e) => this.setQuery((e.target as HTMLInputElement).value));
+    const toggle = this.querySelector<HTMLInputElement>('[data-role="show-illegal"]');
+    if (toggle) {
+      toggle.checked = this.#showIllegal;
+      toggle.addEventListener("change", () => {
+        this.#showIllegal = toggle.checked;
+        this.#pageCount = 1;
+        this.renderResults();
+      });
+    }
     this.renderResults();
   }
 
@@ -199,10 +219,15 @@ export class CardFinder extends HTMLElement {
 
     const nameBox = document.createElement("span");
     nameBox.className = "card-row-namebox";
+    const nameLine = document.createElement("span");
+    nameLine.className = "card-row-nameline";
+    const status = cardLegality(card, deckStore.get().format);
+    nameLine.append(buildLegalityDot(status));
     const name = document.createElement("span");
     name.className = "card-row-name";
     name.textContent = card.version ? `${card.name} — ${card.version}` : card.name;
-    nameBox.append(name);
+    nameLine.append(name);
+    nameBox.append(nameLine);
 
     const meta = document.createElement("span");
     meta.className = "card-row-meta";
@@ -254,6 +279,21 @@ export class CardFinder extends HTMLElement {
     bindPreviewTrigger(li, printing);
     return li;
   }
+}
+
+const LEGALITY_LABEL: Record<LegalityStatus, string> = {
+  legal: "Legal in this format",
+  banned: "Banned in this format",
+  rotated_out: "Rotated out of this format",
+  not_yet_released: "Not yet released",
+};
+
+export function buildLegalityDot(status: LegalityStatus): HTMLElement {
+  const dot = document.createElement("span");
+  dot.className = `legality-dot legality-dot-${status.replace(/_/g, "-")}`;
+  dot.setAttribute("aria-label", LEGALITY_LABEL[status]);
+  dot.title = LEGALITY_LABEL[status];
+  return dot;
 }
 
 function buildEmpty(noCardsAtAll: boolean): HTMLElement {

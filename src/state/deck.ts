@@ -31,11 +31,13 @@
 import { computeMaxCopies, type CardT, type InkT } from "@bjorvack/lorcana-schemas";
 
 import { cardsById } from "../data/cards";
+import { defaultFormat, type Format } from "../data/legality";
 
 export interface DeckState {
   readonly inks: readonly InkT[];
   readonly cards: ReadonlyMap<string, number>;
   readonly locks: ReadonlySet<string>;
+  readonly format: Format;
 }
 
 export interface ReducerResult {
@@ -49,12 +51,23 @@ const ok = (state: DeckState, ...warnings: string[]): ReducerResult => ({
   warnings,
 });
 
-export const emptyDeck = (inks: readonly InkT[] = ["Amber", "Steel"]): DeckState => {
+export const emptyDeck = (
+  inks: readonly InkT[] = ["Amber", "Steel"],
+  format: Format = defaultFormat(),
+): DeckState => {
   if (inks.length < 1 || inks.length > 2) {
     throw new Error(`emptyDeck: inks must hold 1 or 2 inks, got ${inks.length}`);
   }
-  return { inks: [...inks], cards: new Map(), locks: new Set() };
+  return { inks: [...inks], cards: new Map(), locks: new Set(), format };
 };
+
+export function setFormat(state: DeckState, format: Format): ReducerResult {
+  // Swapping format is purely informational: we don't evict cards
+  // that go illegal. Per DESIGN, illegal cards stay visible with a
+  // dot so users see exactly why their deck isn't tournament-legal.
+  if (state.format === format) return ok(state);
+  return ok({ ...state, format });
+}
 
 // --- helpers ----------------------------------------------------
 
@@ -154,7 +167,7 @@ export function setInks(state: DeckState, inks: readonly InkT[]): ReducerResult 
   const locks = new Set([...state.locks].filter((id) => cards.has(id)));
   const warnings =
     evicted.length > 0 ? [`Removed ${evicted.length} card(s) outside the new inks`] : [];
-  return { state: { inks: [...inks], cards, locks }, warnings };
+  return { state: { ...state, inks: [...inks], cards, locks }, warnings };
 }
 
 export function clearDeck(state: DeckState): ReducerResult {
