@@ -262,6 +262,54 @@ Key behaviours:
   clipboard and opens the inktable.net import URL with that payload,
   same UX as today.
 
+### Format selector (Core / Infinity)
+
+A **Format** chip lives next to the ink selector. Two values:
+
+- **Core Constructed** — only the most recent two yearly blocks of
+  sets, banlist applied. This is the format most users play in
+  sanctioned events.
+- **Infinity Constructed** — every set ever printed, separate
+  banlist applied. Useful for casual play and what the model's
+  vocabulary actually covers end-to-end.
+
+The active format drives three things:
+
+1. **Card finder**: cards that fail `computeLegality(card, banlist,
+   rotation, format, today)` are hidden by default. A
+   "Show illegal cards" toggle reveals them with a status pill
+   coloured by reason (red = banned, grey = rotated out, yellow =
+   not yet released).
+2. **Deck list**: each row carries the same dot next to its name.
+   Editing a deck into illegality (via URL hash, format swap, or a
+   banlist refresh) does **not** silently drop cards — they stay
+   visible with the dot so the user can see exactly why the deck
+   is not tournament-legal.
+3. **Generate**: the `legalLogicalIds` mask passed to the inference
+   worker is intersected with the format-legal set. The model's
+   vocabulary is fixed at training time (every card the encoder
+   ever saw), so a Core-format generate is just a tighter mask
+   over the same proposal head — no retrain needed.
+
+Default value is decided at load by `asOf > rotation_cutoff` so
+post-Set-9 (September 2025) loads default to Core, pre-Set-9 loads
+default to Infinity. The chip persists to URL hash (`#format=core`)
+so a shared link reproduces the same legality state.
+
+The format selector is wired through the same plumbing as the ink
+selector: a custom event on `<format-selector>` flips deck state,
+which re-derives the finder + deck list selectors. The `<format-selector>`
+mounts in the action bar; the source of truth for the active format
+lives on the deck store (`state.format`, defaulting to the boot-time
+choice). Switching format does **not** rebuild any data; the banlist
++ rotation are bundled with `cards.json` (see *Build-time pinning*),
+so legality is a pure lookup.
+
+`build/fetch-cards.ts` is extended to also pull `banlist.json` and
+`rotation.json` from the same `cards-vN` release tag and emit them
+to `src/data/` alongside `cards.json`. A future bump only has to bump
+`CARDS_RELEASE_TAG`; the three files travel together.
+
 ### Failure modes the UI must handle
 
 | Scenario | Behaviour |
