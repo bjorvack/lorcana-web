@@ -11,7 +11,7 @@
  * thrash by targeting the specific nodes that need to change.
  */
 
-import { CARD_COUNT, CARDS_RELEASE_TAG } from "../data/cards";
+import { CARD_COUNT, CARDS_RELEASE_TAG, cardsById } from "../data/cards";
 import type { Format } from "../data/legality";
 import { clearDeck, setFormat, setInks } from "../state/deck";
 import { deckStore, initialWarnings } from "../state/index";
@@ -89,7 +89,30 @@ export class AppRoot extends HTMLElement {
 
   private handleInksChanged = (event: Event): void => {
     const inks = (event as CustomEvent<{ inks: InkT[] }>).detail.inks;
-    deckStore.update((state) => setInks(state, inks).state);
+    // Count how many cards a setInks would evict so we can ask the
+    // user before silently dropping them. The reducer itself evicts
+    // mechanically; the UI is responsible for the confirmation
+    // step (DESIGN.md, deck.ts setInks comment).
+    const state = deckStore.get();
+    const newSet = new Set(inks);
+    let evicted = 0;
+    for (const [cardId, count] of state.cards) {
+      const card = cardsById.get(cardId);
+      if (!card || !card.inks.every((i) => newSet.has(i))) evicted += count;
+    }
+    if (evicted > 0) {
+      const ok = window.confirm(
+        `Switching inks will remove ${evicted} card${evicted === 1 ? "" : "s"} from your deck. Continue?`,
+      );
+      if (!ok) {
+        // Roll the chip pressed state back to whatever the store
+        // currently says is active.
+        const ink = this.querySelector<InkSelector>("ink-selector");
+        if (ink) ink.selected = state.inks;
+        return;
+      }
+    }
+    deckStore.update((s) => setInks(s, inks).state);
   };
 
   private handleFormatChanged = (event: Event): void => {
@@ -146,7 +169,14 @@ export class AppRoot extends HTMLElement {
     `;
     const clear = this.querySelector<HTMLButtonElement>('[data-role="clear-deck"]');
     clear?.addEventListener("click", () => {
-      deckStore.update((state) => clearDeck(state).state);
+      const state = deckStore.get();
+      if (state.cards.size > 0) {
+        const ok = window.confirm(
+          `Remove all ${totalCards(state)} card${totalCards(state) === 1 ? "" : "s"} from the deck?`,
+        );
+        if (!ok) return;
+      }
+      deckStore.update((s) => clearDeck(s).state);
     });
     const about = this.querySelector<HTMLButtonElement>('[data-role="open-about"]');
     about?.addEventListener("click", () => {
