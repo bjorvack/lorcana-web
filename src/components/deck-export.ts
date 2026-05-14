@@ -57,6 +57,16 @@ export class DeckExport extends HTMLElement {
     }
   }
 
+  private async copyShareUrl(): Promise<void> {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      this.setStatus("Share link copied.");
+    } catch {
+      this.setStatus("Clipboard blocked — see browser permissions.", "error");
+    }
+  }
+
   private openInInktable(): void {
     const state = deckStore.get();
     const entries = buildExportEntries(state.cards, cardsById);
@@ -80,19 +90,27 @@ export class DeckExport extends HTMLElement {
 
   private syncEnabled(): void {
     const empty = deckStore.get().cards.size === 0;
+    // ``share`` works on an empty deck too (link still encodes the
+    // ink selection); only the deck-only exports require content.
     for (const btn of this.querySelectorAll<HTMLButtonElement>("button[data-export]")) {
-      btn.disabled = empty;
+      const role = btn.dataset.export;
+      btn.disabled = role !== "share" && empty;
     }
   }
 
   private render(): void {
     this.innerHTML = `
       <div class="deck-export">
+        <button class="secondary" data-export="share" type="button">Share link</button>
         <button class="secondary" data-export="plaintext" type="button">Copy decklist</button>
         <button class="secondary" data-export="inktable" type="button">Open in Inktable</button>
         <span class="export-status" data-role="export-status" aria-live="polite"></span>
       </div>
     `;
+    this.querySelector<HTMLButtonElement>('[data-export="share"]')?.addEventListener(
+      "click",
+      () => void this.copyShareUrl(),
+    );
     this.querySelector<HTMLButtonElement>('[data-export="plaintext"]')?.addEventListener(
       "click",
       () => void this.copyPlaintext(),
