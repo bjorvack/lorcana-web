@@ -52,3 +52,68 @@ jobs:
       - run: pnpm build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  e2e:
+    # AI Generate-flow smoke test. Kept in its own job so a
+    # Playwright outage doesn't gate every lint + typecheck push.
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: "@bjorvack"
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Same prefetch dance the test job runs — the model bundle has
+      # to land under public/model/ before vite preview can serve it.
+      - run: pnpm prefetch:cards
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: pnpm prefetch:model
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: pnpm build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # Start the preview server in the background; the test config
+      # picks it up via E2E_BASE_URL so Playwright doesn't try to
+      # manage it itself.
+      - name: Start preview server
+        run: |
+          pnpm preview --host --port 4173 &
+          echo $! > .preview.pid
+          for i in {1..30}; do
+            if curl -sf http://localhost:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+
+      - name: Run E2E
+        env:
+          E2E_BASE_URL: http://localhost:4173/
+        run: pnpm test:e2e
+
+      - name: Stop preview server
+        if: always()
+        run: |
+          if [ -f .preview.pid ]; then
+            kill "$(cat .preview.pid)" || true
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
