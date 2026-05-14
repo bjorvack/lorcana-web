@@ -28,6 +28,17 @@ import type { GenerateProgressEvent } from "../worker/protocol";
 
 const TAG = "deck-generator";
 
+/** Width of the snap dead-zone around each preset, in slider units. */
+const SNAP_RADIUS = 3;
+const STYLE_SNAPS: readonly number[] = [0, 50, 100];
+
+function snapToPreset(v: number): number {
+  for (const s of STYLE_SNAPS) {
+    if (Math.abs(v - s) <= SNAP_RADIUS) return s;
+  }
+  return v;
+}
+
 // Title-case so the comparison against `state.inks` (which is typed
 // to `InkT` from the schema and uses the title-case enum values)
 // produces real matches. Order is the canonical training-pipeline
@@ -58,6 +69,20 @@ export class DeckGenerator extends HTMLElement {
     // Re-render Generate when the AI subsystem flips between
     // ok / failed so the button reflects the current availability.
     this.#unsubscribeAI = aiStore.subscribe(() => this.updateView());
+    const slider = this.querySelector<HTMLInputElement>('[data-role="style"]');
+    if (slider) {
+      this.refreshStyleReadout(Number(slider.value));
+      slider.addEventListener("input", () => {
+        // Snap to the three preset positions when the slider lands
+        // within a small dead-zone of a known label. Outside the
+        // dead-zone we leave the value continuous so the user can
+        // still dial in the in-between mixes; the readout flips to
+        // "(interpolated)" to flag that the result is best-effort.
+        const snapped = snapToPreset(Number(slider.value));
+        if (snapped !== Number(slider.value)) slider.value = String(snapped);
+        this.refreshStyleReadout(snapped);
+      });
+    }
     this.refreshHint();
     this.querySelector<HTMLButtonElement>('[data-role="hint-dismiss"]')?.addEventListener(
       "click",
@@ -76,6 +101,15 @@ export class DeckGenerator extends HTMLElement {
   disconnectedCallback(): void {
     this.#unsubscribe?.();
     this.#unsubscribeAI?.();
+  }
+
+  private refreshStyleReadout(v: number): void {
+    const readout = this.querySelector<HTMLElement>('[data-role="style-readout"]');
+    if (!readout) return;
+    if (v === 0) readout.textContent = "Safe";
+    else if (v === 50) readout.textContent = "Balanced";
+    else if (v === 100) readout.textContent = "Brew";
+    else readout.textContent = `${v}% (interpolated)`;
   }
 
   private refreshHint(): void {
@@ -286,9 +320,17 @@ export class DeckGenerator extends HTMLElement {
             min="0"
             max="100"
             value="50"
+            step="1"
+            list="style-snap-points"
             data-role="style"
-            aria-label="Style: 0 is Safe (meta-faithful), 100 is Brew (exploratory)"
+            aria-label="Style: 0 is Safe (meta-faithful), 50 is Balanced, 100 is Brew (exploratory)"
           />
+          <datalist id="style-snap-points">
+            <option value="0" label="Safe"></option>
+            <option value="50" label="Balanced"></option>
+            <option value="100" label="Brew"></option>
+          </datalist>
+          <span class="generator-style-readout" data-role="style-readout"></span>
         </label>
         <button class="primary" data-role="generate">Generate deck</button>
         <span class="generator-status" data-role="status"></span>

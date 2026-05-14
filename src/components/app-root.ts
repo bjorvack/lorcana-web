@@ -22,6 +22,7 @@ import "./about-modal";
 import type { AboutModal } from "./about-modal";
 import "./ai-failure-banner";
 import "./banner";
+import "./consent-banner";
 import type { AppBanner } from "./banner";
 import "./card-finder";
 import "./deck-export";
@@ -139,6 +140,7 @@ export class AppRoot extends HTMLElement {
       <app-banner hidden></app-banner>
       <ai-failure-banner hidden></ai-failure-banner>
       <about-modal></about-modal>
+      <consent-banner hidden></consent-banner>
 
       <div class="action-bar">
         <ink-selector></ink-selector>

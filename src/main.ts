@@ -12,3 +12,9 @@ import "./ui/theme.css";
 import "./ui/components.css";
 
 import "./components/app-root";
+import { bootAnalytics } from "./state/analytics";
+
+// Auto-load GA if the user accepted on a previous visit. Declining
+// or having never chosen is a no-op — the consent banner takes care
+// of re-prompting when needed.
+bootAnalytics();

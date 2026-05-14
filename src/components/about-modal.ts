@@ -16,6 +16,7 @@ import {
   CARD_SET_VERSION,
   LEGALITY_RELEASE_TAG,
 } from "../data/cards";
+import { consentStore, reopenConsent } from "../state/analytics";
 import { MODEL_RELEASE_TAG, VERSION } from "../version";
 
 const TAG = "about-modal";
@@ -82,10 +83,15 @@ export class AboutModal extends HTMLElement {
         <section>
           <h3>What this site does <em>not</em> do</h3>
           <ul class="about-list">
-            <li>No analytics, no Sentry, no telemetry endpoints.</li>
+            <li>No Sentry, no custom telemetry endpoints.</li>
             <li>No accounts, no server-side deck storage.</li>
-            <li>No cookies.</li>
+            <li>No analytics or cookies unless you opt in (see below).</li>
           </ul>
+        </section>
+        <section>
+          <h3>Analytics</h3>
+          <p class="about-analytics" data-role="about-analytics"></p>
+          <button class="secondary" type="button" data-role="manage-analytics">Manage analytics</button>
         </section>
         <section>
           <h3>Source</h3>
@@ -105,6 +111,27 @@ export class AboutModal extends HTMLElement {
     this.querySelector<HTMLElement>('[data-role="about-backdrop"]')?.addEventListener("click", () =>
       this.close(),
     );
+    this.refreshAnalyticsStatus();
+    consentStore.subscribe(() => this.refreshAnalyticsStatus());
+    this.querySelector<HTMLButtonElement>('[data-role="manage-analytics"]')?.addEventListener(
+      "click",
+      () => {
+        reopenConsent();
+        this.close();
+      },
+    );
+  }
+
+  private refreshAnalyticsStatus(): void {
+    const p = this.querySelector<HTMLElement>('[data-role="about-analytics"]');
+    if (!p) return;
+    const { choice } = consentStore.get();
+    p.textContent =
+      choice === "accepted"
+        ? "Analytics is currently ON. Click Manage analytics to opt back out."
+        : choice === "declined"
+          ? "Analytics is currently OFF. Click Manage analytics to opt in."
+          : "Analytics is currently OFF (you haven't been asked yet). Click Manage analytics to choose.";
   }
 }
 
