@@ -106,8 +106,8 @@ Empty for now (deferred to Phase 2): `<style-picker>`, `<realism-pill>`.
 
 ### Export
 
-- [ ] Inktable-compatible base64 encoding (matches today's site).
-- [ ] "Copy to clipboard" + "Open in Inktable" buttons.
+- [x] Inktable-compatible base64 encoding (matches today's site).
+- [x] "Copy to clipboard" + "Open in Inktable" buttons.
 
 ### Failure handling
 

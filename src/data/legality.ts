@@ -62,12 +62,13 @@ export function isLegalNow(card: CardT, format: Format, asOf: Date = new Date())
 }
 
 /**
- * Decide the default format at boot. Pre-Set-9 (no rotation has
- * happened yet) we default to Infinity so we don't surprise users
- * by hiding the cards they're used to. Post-Set-9 we default to
- * Core, which matches what tournaments enforce.
+ * Default format at boot. Core Constructed is what sanctioned events
+ * enforce, so it's the format most users want by default; Infinity
+ * is a one-click switch away via the <format-selector> chip.
+ *
+ * ``asOf`` is accepted for symmetry with the rest of the legality
+ * API but currently isn't consulted — the default is unconditional.
  */
-export function defaultFormat(asOf: Date = new Date()): Format {
-  const rotated = rotation.blocks.some((b) => new Date(b.rotationDate) <= asOf);
-  return rotated ? "core_constructed" : "infinity_constructed";
+export function defaultFormat(_asOf: Date = new Date()): Format {
+  return "core_constructed";
 }

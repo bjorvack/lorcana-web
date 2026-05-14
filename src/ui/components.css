@@ -629,3 +629,22 @@ format-selector {
   color: var(--text-muted);
   margin: 0.4rem 0 0.6rem;
 }
+
+/* --- deck export ------------------------------------------ */
+.deck-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.deck-export button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.deck-export .export-status {
+  font-size: var(--fs-200);
+  color: var(--text-muted);
+  min-width: 8ch;
+}
+.deck-export .export-status.error {
+  color: var(--ink-ruby, #c33);
+}

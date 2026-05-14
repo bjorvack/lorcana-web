@@ -19,6 +19,7 @@ import { totalCards } from "../state/selectors";
 import { buildHash } from "../state/url";
 import { VERSION } from "../version";
 import "./card-finder";
+import "./deck-export";
 import "./deck-generator";
 import "./deck-list";
 import "./format-selector";
@@ -104,7 +105,7 @@ export class AppRoot extends HTMLElement {
         <format-selector></format-selector>
         <span style="flex: 1"></span>
         <deck-generator></deck-generator>
-        <button class="secondary" disabled title="Coming in the next commit">Export</button>
+        <deck-export></deck-export>
         <button class="ghost" data-role="clear-deck">Clear deck</button>
       </div>
 
