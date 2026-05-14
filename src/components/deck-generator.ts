@@ -11,7 +11,7 @@
  * already-loaded worker.
  */
 
-import { computeMaxCopies, type CardT } from "@bjorvack/lorcana-schemas";
+import { computeMaxCopies, type CardT, type InkT } from "@bjorvack/lorcana-schemas";
 
 import { cardsById } from "../data/cards";
 import { loadModelBundle } from "../model/bundle";
@@ -86,11 +86,25 @@ export class DeckGenerator extends HTMLElement {
         state.inks.includes(name) ? 1 : 0,
       ) as unknown as readonly [number, number, number, number, number, number];
 
+      // Vocab-aligned legality mask the worker enforces hard-rule.
+      // The main thread is the only side that has the authoritative
+      // ``Card.inks`` for every printing, so the per-card "would
+      // addCard accept this?" check lives here. The worker treats a
+      // zero entry as excluded, so we can't lose cards to silent
+      // out-of-ink rejection downstream.
+      const legalLogicalIds = buildLegalLogicalIds(this.#vocab, state.inks);
+
       this.setPhase("generating", { progress: "Calling the model…" });
+      // Lorcana's actual rule is "at least 60 cards"; tournament-grade
+      // decks routinely run a few over to widen the pool for searches.
+      // We aim a bit over so silent rejections (e.g. a card whose ink
+      // entry is unknown to the vocab) still leave us above 60.
       const { deck, realism } = await this.#client.generate({
         partial,
         inkMultihot,
         style,
+        legalLogicalIds,
+        targetSize: 60,
       });
 
       // Replace the deck wholesale: the model's pick set is the new
@@ -175,6 +189,32 @@ export class DeckGenerator extends HTMLElement {
       </div>
     `;
   }
+}
+
+/**
+ * Build the vocab-aligned legality mask passed to the worker.
+ *
+ * For each logical card in the vocab, we look up its canonical
+ * printing in ``cardsById`` and mark it legal iff every ink the card
+ * carries is one of the deck's chosen inks. That's the same rule
+ * ``addCard`` uses on the deck store side, so cards that survive the
+ * mask are guaranteed to land in the deck rather than being silently
+ * rejected.
+ */
+function buildLegalLogicalIds(vocab: VocabMap, deckInks: readonly InkT[]): Uint8Array {
+  // +1 for the PAD slot at index 0; we never set it to 1.
+  const vocabSize = vocab.entries.length;
+  const out = new Uint8Array(vocabSize);
+  const inkSet = new Set(deckInks);
+  for (const entry of vocab.entries) {
+    if (entry.index <= 0 || entry.index >= vocabSize) continue;
+    const card = cardsById.get(entry.canonicalPrintingId);
+    if (!card) continue;
+    if (card.inks.every((i) => inkSet.has(i))) {
+      out[entry.index] = 1;
+    }
+  }
+  return out;
 }
 
 if (!customElements.get(TAG)) customElements.define(TAG, DeckGenerator);

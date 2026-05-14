@@ -27,5 +27,6 @@ if (typeof hook !== "function") {
   throw new Error("fetchModel plugin is missing buildStart");
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-await (hook as any).call(fakeCtx, { plugins: [] });
+await (hook as unknown as (this: typeof fakeCtx, opts: unknown) => Promise<void>).call(fakeCtx, {
+  plugins: [],
+});

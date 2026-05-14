@@ -48,6 +48,17 @@ export interface GenerateRequest {
   readonly maxCopies?: number;
   /** Higher = more diverse picks. 0 = argmax. */
   readonly temperature?: number;
+  /**
+   * Optional vocab-aligned legality mask the main thread can pass in.
+   * 1 = legal pick, 0 = excluded. Index 0 is reserved for PAD.
+   *
+   * The worker doesn't have access to the full CardSet (it only sees
+   * vocab.json), so legality based on actual ``Card.inks`` data lives
+   * on the main thread. Passing the pre-computed mask is cheaper than
+   * shipping per-card inks through the bundle and lets the legality
+   * rule evolve (e.g. format bans) without a model retrain.
+   */
+  readonly legalLogicalIds?: Uint8Array;
 }
 
 export interface GenerateProgressEvent {

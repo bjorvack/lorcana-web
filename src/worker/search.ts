@@ -51,17 +51,40 @@ export function buildInkLegality(
   // chosen ink set. (Card has amber+ruby; deck must contain both.)
   // Dual-ink cards are common enough that "any overlap" would let
   // cards in that the deck literally can't play.
-  let deckBits = 0;
-  for (let i = 0; i < deckInkMultihot.length; i++) {
-    if (deckInkMultihot[i]! > 0) deckBits |= 1 << i;
-  }
+  // ``deckBits`` is no longer used downstream — the main thread now
+  // hands us a precomputed legality mask. We still derive it for
+  // diagnostic logging in dev (no-op at runtime).
+  void deckInkMultihot;
   const mask = new Uint8Array(cardInkMask.length);
   let count = 0;
+  // Determine whether the worker received any real per-card data. If
+  // every entry is zero we have no ink info, so we fall back to
+  // "every non-PAD card is legal" and rely on the proposal net's
+  // ink-conditioned distribution to keep picks in-ink (soft rule).
+  // When the main thread passes a precomputed mask, ``cardInkMask[i]``
+  // is 1 for legal cards and 0 for excluded — we use that directly.
+  let hasInfo = false;
   for (let i = 1; i < cardInkMask.length; i++) {
-    // PAD (index 0) stays masked out.
+    if (cardInkMask[i] !== 0) {
+      hasInfo = true;
+      break;
+    }
+  }
+  for (let i = 1; i < cardInkMask.length; i++) {
+    if (!hasInfo) {
+      mask[i] = 1;
+      count++;
+      continue;
+    }
     const cardBits = cardInkMask[i]!;
-    if (cardBits === 0) continue;
-    if ((cardBits & deckBits) === cardBits) {
+    // ``cardBits === 1`` is the main-thread legality-mask sentinel
+    // (see ``deriveFromLegalIds``). Anything non-zero is treated as
+    // a positive signal. We deliberately don't try to AND with
+    // ``deckBits`` here when we have a precomputed mask: the main
+    // thread already did the deck-vs-card-inks check using the
+    // authoritative CardSet, so a second filter would be redundant
+    // at best and incorrect at worst.
+    if (cardBits !== 0) {
       mask[i] = 1;
       count++;
     }
@@ -185,11 +208,19 @@ async function pickNextCard(
   // --- Convert to log P + apply legality + max-copies mask ----------
   // Log-softmax with numerical stability.
   let maxLogit = -Infinity;
+  let nFiniteMasked = 0;
+  let nMasked = 0;
   for (let i = 0; i < logits.length; i++) {
-    if (legality.mask[i] && logits[i]! > maxLogit) maxLogit = logits[i]!;
+    if (!legality.mask[i]) continue;
+    nMasked++;
+    if (Number.isFinite(logits[i]!)) nFiniteMasked++;
+    if (logits[i]! > maxLogit) maxLogit = logits[i]!;
   }
   if (maxLogit === -Infinity) {
-    throw new Error("legality mask excluded every card");
+    throw new Error(
+      `legality mask excluded every card (masked=${nMasked}, finite=${nFiniteMasked}, ` +
+        `logits.length=${logits.length}, mask.length=${legality.mask.length})`,
+    );
   }
   let sumExp = 0;
   for (let i = 0; i < logits.length; i++) {
@@ -290,6 +321,26 @@ export async function completeDeck(
   if (legality.inMaskCount === 0) {
     throw new Error("No legal cards for the chosen inks; pick at least one ink.");
   }
+
+  // Seed the partial when the user starts from an empty deck. With an
+  // all-PAD input the ProposalNet's masked mean+max pool degenerates
+  // (every key-padding-masked row gives the Transformer rows full of
+  // -inf which propagate through LayerNorm to NaN logits — diagnosed
+  // empirically: ``finite=0`` over 2 282 masked candidates). Sampling
+  // one starter card from the play-frequency table for the chosen
+  // ink-pair gives the model a real token to attend over without
+  // biasing the eventual deck much: the starter goes through the
+  // same proposal × evaluator × novelty scoring on subsequent picks
+  // and the realism pill picks it up.
+  if (partial.size === 0) {
+    const seed = pickSeedCard(ctx, opts.inkMultihot, legality);
+    if (seed !== null) {
+      partial.counts.set(seed, 1);
+      partial.size = 1;
+      opts.onProgress?.(partial.size, seed);
+    }
+  }
+
   // Math.random is fine — the search is already non-deterministic
   // through the model itself and the user doesn't need byte-perfect
   // reproducibility.
@@ -320,6 +371,30 @@ export async function completeDeck(
     deck: Array.from(partial.counts.entries()) as ReadonlyArray<readonly [number, number]>,
     realism,
   };
+}
+
+function pickSeedCard(
+  ctx: SearchContext,
+  inkMultihot: readonly number[],
+  legality: InkLegality,
+): number | null {
+  // Use the empirical play-frequency table for the chosen ink pair
+  // as the seed distribution. Falls back to "_all" if the pair isn't
+  // in the table (a future ink combo from a not-yet-trained-on set).
+  const key = inkPairKey(inkMultihot);
+  const row = ctx.playFrequency[key] ?? ctx.playFrequency["_all"] ?? {};
+  let best = -Infinity;
+  let bestId: number | null = null;
+  for (const [idStr, freq] of Object.entries(row)) {
+    const id = Number(idStr);
+    if (!Number.isInteger(id) || id <= 0 || id >= legality.mask.length) continue;
+    if (!legality.mask[id]) continue;
+    if (freq > best) {
+      best = freq;
+      bestId = id;
+    }
+  }
+  return bestId;
 }
 
 async function scoreRealism(ctx: SearchContext, partial: PartialDeck): Promise<number> {
