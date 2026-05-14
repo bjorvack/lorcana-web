@@ -882,3 +882,31 @@ button.link {
   cursor: pointer;
   font: inherit;
 }
+
+/* --- generator hint --------------------------------------- */
+.generator-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px dashed var(--accent, #6aa3ff);
+  font-size: var(--fs-200);
+  color: var(--accent, #6aa3ff);
+}
+.generator-hint[hidden] {
+  display: none;
+}
+.generator-hint button {
+  font-size: 1rem;
+  line-height: 1;
+  color: inherit;
+  padding: 0 0.25rem;
+}
+
+/* --- deck-row focus ring --------------------------------- */
+.deck-row:focus-visible {
+  outline: 2px solid var(--accent, #6aa3ff);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

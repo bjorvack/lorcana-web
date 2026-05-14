@@ -36,11 +36,42 @@ export class DeckList extends HTMLElement {
   connectedCallback(): void {
     this.render();
     this.#unsubscribe = deckStore.subscribe(() => this.render());
+    this.addEventListener("keydown", this.handleKey);
   }
 
   disconnectedCallback(): void {
     this.#unsubscribe?.();
+    this.removeEventListener("keydown", this.handleKey);
   }
+
+  private handleKey = (e: KeyboardEvent): void => {
+    // Up / Down arrows move focus across rows, jumping over the
+    // visual group headings without burning extra tab stops on them.
+    // Home / End jump to the first / last row. The interactive
+    // children inside each row still get Tab as normal.
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown" && e.key !== "Home" && e.key !== "End") {
+      return;
+    }
+    const rows = [...this.querySelectorAll<HTMLElement>('[data-role="deck-row"]')];
+    if (rows.length === 0) return;
+    const active = document.activeElement as HTMLElement | null;
+    const current = active?.closest('[data-role="deck-row"]') as HTMLElement | null;
+    const i = current ? rows.indexOf(current) : -1;
+    let next: HTMLElement | undefined;
+    if (e.key === "Home") next = rows[0];
+    else if (e.key === "End") next = rows[rows.length - 1];
+    else if (e.key === "ArrowDown") next = rows[Math.min(rows.length - 1, i + 1)] ?? rows[0];
+    else next = rows[Math.max(0, i - 1)] ?? rows[0];
+    if (next) {
+      // Roving tabindex: only the focused row participates in the
+      // tab cycle, so Shift+Tab out of the deck lands in the action
+      // bar rather than walking up through every row.
+      for (const r of rows) r.tabIndex = -1;
+      next.tabIndex = 0;
+      next.focus();
+      e.preventDefault();
+    }
+  };
 
   private render(): void {
     const state = deckStore.get();
@@ -64,6 +95,12 @@ export class DeckList extends HTMLElement {
       container.append(buildGroup(type, group, state.format));
     }
     this.replaceChildren(container);
+
+    // Roving tabindex seed: the first row is tab-stoppable so the
+    // user can land on the deck list with one Tab, then drive Up/Down
+    // from there.
+    const first = this.querySelector<HTMLElement>('[data-role="deck-row"]');
+    if (first) first.tabIndex = 0;
   }
 }
 
@@ -103,6 +140,12 @@ function buildGroup(type: CardType, rows: readonly DeckRow[], format: Format): H
 function buildRow(row: DeckRow, format: Format): HTMLElement {
   const li = document.createElement("li");
   li.className = "deck-row";
+  // Make the row itself focusable so arrow-key nav has something to
+  // land on. The interactive children (minus / plus / lock) stay in
+  // the natural tab order; the row's role is "give Up/Down a
+  // sensible target across all groups".
+  li.tabIndex = -1;
+  li.dataset.role = "deck-row";
 
   // Thumbnail of the specific printing the user added. Lazy-loaded so
   // tall decks don't blast the network on first paint.

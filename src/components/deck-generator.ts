@@ -41,6 +41,8 @@ export class DeckGenerator extends HTMLElement {
   #progressMessage = "";
   #errorMessage = "";
   #lastRealism: number | null = null;
+  #hasGeneratedThisSession = false;
+  #unsubscribe?: () => void;
 
   connectedCallback(): void {
     this.render();
@@ -48,6 +50,40 @@ export class DeckGenerator extends HTMLElement {
       "click",
       () => void this.handleGenerate(),
     );
+    // Refresh the discoverability hint as the deck grows / shrinks.
+    this.#unsubscribe = deckStore.subscribe(() => this.refreshHint());
+    this.refreshHint();
+    this.querySelector<HTMLButtonElement>('[data-role="hint-dismiss"]')?.addEventListener(
+      "click",
+      () => {
+        try {
+          localStorage.setItem("lorcana:hint:generate:dismissed", "1");
+        } catch {
+          // Quota / disabled / private mode — the hint just shows
+          // again next visit, no functional harm.
+        }
+        this.refreshHint();
+      },
+    );
+  }
+
+  disconnectedCallback(): void {
+    this.#unsubscribe?.();
+  }
+
+  private refreshHint(): void {
+    const hint = this.querySelector<HTMLElement>('[data-role="hint"]');
+    if (!hint) return;
+    const total = totalCards(deckStore.get());
+    let dismissed = false;
+    try {
+      dismissed = localStorage.getItem("lorcana:hint:generate:dismissed") === "1";
+    } catch {
+      // No storage → assume not dismissed; the user gets the hint
+      // exactly once per session.
+    }
+    const show = !dismissed && !this.#hasGeneratedThisSession && total > 0 && total < 60;
+    hint.hidden = !show;
   }
 
   private async handleGenerate(): Promise<void> {
@@ -127,6 +163,8 @@ export class DeckGenerator extends HTMLElement {
       // (see ``state/generation.ts``), so publishing here is safe
       // even though ``applyGeneratedDeck`` triggers a store update.
       generationStore.set({ lastRealism: realism });
+      this.#hasGeneratedThisSession = true;
+      this.refreshHint();
       this.setPhase("done", { progress: `Done. Realism ${(realism * 100).toFixed(0)}%.` });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -219,6 +257,15 @@ export class DeckGenerator extends HTMLElement {
         <span class="generator-status" data-role="status"></span>
         <span class="generator-prefill" aria-hidden="true">
           ${total > 0 ? `(${total} pre-picked cards will be kept as a seed)` : ""}
+        </span>
+        <span class="generator-hint" data-role="hint" hidden role="status">
+          <span class="generator-hint-body">Generate can fill in the gaps from your seed →</span>
+          <button
+            class="ghost"
+            type="button"
+            data-role="hint-dismiss"
+            aria-label="Dismiss hint"
+          >×</button>
         </span>
       </div>
     `;

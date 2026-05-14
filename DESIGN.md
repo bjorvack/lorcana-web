@@ -7,6 +7,37 @@
 > other origin (except optional card images). Inference runs locally in
 > a Web Worker with ONNX Runtime Web.
 
+## Implementation status
+
+Phase 1 (manual builder) and Phase 2 (AI generator) are live at
+https://bjorvack.github.io/lorcana-web/. The site ships:
+
+- The full manual flow: `<ink-selector>`, `<card-finder>` with search
+  + pagination + lazy images, `<deck-list>` with type groups and
+  arrow-key roving-tabindex nav, count + lock controls, ink-swap
+  confirmation, Clear-deck confirmation, `<mana-curve>` canvas chart,
+  `<type-breakdown>` chips.
+- Format-aware legality: `<format-selector>` (Core default), legality
+  dots on every row, "Show illegal cards" toggle in the finder,
+  format mask intersected into the Generate worker's legality bitmap,
+  `<app-banner>` for URL-hash unknown-card warnings.
+- Persistence: URL hash (shareable links) + localStorage (returning
+  users) with a versioned payload; URL hash always wins at boot.
+- Export: `<deck-export>` with **Share link** (URL copy), **Copy
+  decklist** (plaintext), **Open in Inktable** (legacy `svc=dreamborn`
+  URL scheme).
+- AI: WebGPU-first / WASM-fallback worker, proposal + evaluator + per-
+  card ink mask, continuous Style slider (Safe → Balanced → Brew),
+  locks preserved across regenerate, `<realism-pill>` after each run,
+  one-shot "Generate can fill in the gaps" discoverability hint.
+- `<about-modal>` surfacing pinned tags, cardset hash, model version,
+  and an honest "what we do / don't do" disclosure.
+
+The remaining work is tracked in `TODO.md`; the biggest open items
+are live realism scoring (DESIGN Q4), the AI failure banner / Retry
+flow (Q5), baked WebP thumbnail fallback (Q6), and the GA4 consent
+banner (Q8).
+
 ## Purpose
 
 This is the only consumer of `cards-vN` and `model-vN` that real users
