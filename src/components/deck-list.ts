@@ -156,7 +156,7 @@ function buildRow(row: DeckRow, format: Format): HTMLElement {
   img.loading = "lazy";
   img.decoding = "async";
   img.alt = `${row.card.name}${row.card.version ? ` — ${row.card.version}` : ""}`;
-  bindImageFallback(img, img.alt);
+  bindImageFallback(img, img.alt, row.card.id);
   thumbWrap.append(img);
 
   const countCtrl = document.createElement("span");

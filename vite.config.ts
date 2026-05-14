@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import { visualizer } from "rollup-plugin-visualizer";
 
+import { bakeThumbs } from "./build/bake-thumbs";
 import { fetchCards } from "./build/fetch-cards";
 import { fetchModel } from "./build/fetch-model";
 import { stripOrtWasm } from "./build/strip-ort-wasm";
@@ -23,7 +24,15 @@ export default defineConfig({
   base: "./",
   // Plugin order is significant: fetchCards writes cards.meta.ts
   // before fetchModel reads it for the cardSetVersion cross-check.
-  plugins: [fetchCards(), fetchModel(), stripOrtWasm(), analyze],
+  // Bake thumbnails on production builds only; ``pnpm dev`` doesn't
+  // need them (the live Lorcast image is the primary anyway).
+  plugins: [
+    fetchCards(),
+    fetchModel(),
+    bakeThumbs({ enabled: process.env.NODE_ENV !== "development" }),
+    stripOrtWasm(),
+    analyze,
+  ],
   resolve: {
     alias: {
       // `@bjorvack/lorcana-schemas` imports `createHash` from `crypto`

@@ -201,7 +201,7 @@ export class CardFinder extends HTMLElement {
     img.decoding = "async";
     img.alt = `${card.name}${card.version ? ` — ${card.version}` : ""}`;
     img.dataset.printing = printing.id;
-    bindImageFallback(img, img.alt);
+    bindImageFallback(img, img.alt, printing.id);
     thumbWrap.append(img);
 
     const inkBox = document.createElement("span");
