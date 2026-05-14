@@ -47,7 +47,6 @@ export interface VocabPayload {
   }[];
 }
 
-
 export interface ModelBundle {
   readonly manifest: ModelManifest;
   readonly proposal: ArrayBuffer;

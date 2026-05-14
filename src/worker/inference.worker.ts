@@ -67,18 +67,50 @@ async function handleInit(req: { requestId: number; bundle: ModelBundle }): Prom
   // Build the two ORT sessions. WebAssembly backend keeps the worker
   // portable across browsers; WebGPU could be a later opt-in via
   // ort.env.webgl/webgpu.
-  const sessionOptions: ort.InferenceSession.SessionOptions = {
+  //
+  // Dynamo-exported ONNX graphs use external-data sidecars (the
+  // ``.onnx.data`` files we ship in the bundle). When loading from
+  // a raw Uint8Array, ORT can't autodiscover those by URL, so we
+  // pass them explicitly via ``SessionOptions.externalData``. The
+  // ``path`` must match the ``location`` recorded inside the graph
+  // proto — which is just the sidecar's filename, e.g.
+  // ``proposal.onnx.data``. Without this, ORT throws a cryptic
+  // ``t.getValue is not a function`` from inside its allocator
+  // because the weight tensors come back undefined.
+  const proposalExtra =
+    bundle.proposalExternalData !== null
+      ? {
+          externalData: [
+            {
+              path: "proposal.onnx.data",
+              data: new Uint8Array(bundle.proposalExternalData),
+            },
+          ],
+        }
+      : {};
+  const evaluatorExtra =
+    bundle.evaluatorExternalData !== null
+      ? {
+          externalData: [
+            {
+              path: "evaluator.onnx.data",
+              data: new Uint8Array(bundle.evaluatorExternalData),
+            },
+          ],
+        }
+      : {};
+  const baseOptions: ort.InferenceSession.SessionOptions = {
     executionProviders: ["wasm"],
     graphOptimizationLevel: "all",
   };
-  const proposalSession = await ort.InferenceSession.create(
-    new Uint8Array(bundle.proposal),
-    sessionOptions,
-  );
-  const evaluatorSession = await ort.InferenceSession.create(
-    new Uint8Array(bundle.evaluator),
-    sessionOptions,
-  );
+  const proposalSession = await ort.InferenceSession.create(new Uint8Array(bundle.proposal), {
+    ...baseOptions,
+    ...proposalExtra,
+  });
+  const evaluatorSession = await ort.InferenceSession.create(new Uint8Array(bundle.evaluator), {
+    ...baseOptions,
+    ...evaluatorExtra,
+  });
 
   const [rows, dim] = bundle.cardEmbeddingsShape;
   const cardEmbeddings = new ort.Tensor("float32", bundle.cardEmbeddings, [rows, dim]);

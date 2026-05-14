@@ -14,7 +14,6 @@
 
 import { fetchModel } from "./fetch-model";
 
-
 const plugin = fetchModel();
 
 const fakeCtx = {
