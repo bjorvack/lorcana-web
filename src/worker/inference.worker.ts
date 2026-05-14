@@ -50,27 +50,19 @@ function emit(event: WorkerEvent): void {
 async function handleInit(req: { requestId: number; bundle: ModelBundle }): Promise<void> {
   const { bundle, requestId } = req;
 
-  // Build vocab-aligned ink-mask array from the shipped vocab.json
-  // assets. We rehash via a single fetch rather than holding the
-  // raw vocab in memory; the worker keeps only the Uint8Array.
-  const vocabResponse = await fetch(asWorkerUrl(bundle.manifest.assets.vocab.path));
-  if (!vocabResponse.ok) {
-    throw new Error(`vocab.json: HTTP ${vocabResponse.status}`);
-  }
-  const vocab = (await vocabResponse.json()) as VocabPayload;
+  // The model bundle already includes the parsed vocab payload (main
+  // thread fetches it because the worker can't compute the right URL
+  // under /assets/...). For v0.1 we still don't have a per-card ink
+  // table, so the legality mask is permissive: every vocab card is
+  // marked as in-mask and we rely on the proposal net's own ink-
+  // conditioned distribution to keep picks in-ink. Adding the ink
+  // table to a future model-vN bundle lets us tighten this into a
+  // hard rule.
   const cardInkMask = new Uint8Array(bundle.manifest.vocabSize + 1);
-  // Build a (cardId → 6-bit ink mask) mapping by re-deriving from the
-  // canonical printing's inks. We sidestep needing the full CardSet
-  // in the worker by reading the names; the manifest doesn't store
-  // ink info per card, so we'd have to ship that. For v0.1 we fall
-  // back to a permissive "every card legal in every ink-pair" mask
-  // and let the search rely on the proposal net's own ink-aware
-  // distribution to filter. A follow-up will add a per-card ink
-  // table to the model bundle.
   for (let i = 1; i <= bundle.manifest.vocabSize; i++) {
     cardInkMask[i] = 0x3f; // all six inks set
   }
-  void vocab; // referenced for the future ink-table follow-up
+  void bundle.vocab; // referenced for the future ink-table follow-up
 
   // Build the two ORT sessions. WebAssembly backend keeps the worker
   // portable across browsers; WebGPU could be a later opt-in via

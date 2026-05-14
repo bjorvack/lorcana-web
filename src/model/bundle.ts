@@ -30,6 +30,24 @@ export interface PlayFrequency {
   readonly [inkPairKey: string]: { readonly [cardId: string]: number };
 }
 
+/** Subset of vocab.json the worker reads on init. The full vocab is
+ * shipped to the bundle (the main thread also reads it for the
+ * printing↔logical map; see ``model/vocab.ts``) — we pass it through
+ * the init message because the worker's ``self.location`` lives at
+ * the bundler's ``/assets/...`` URL, not under ``/model/``, so it
+ * can't compute the right fetch URL on its own. */
+export interface VocabPayload {
+  readonly cards: readonly {
+    readonly index: number;
+    readonly logicalId: string;
+    readonly name: string;
+    readonly version: string;
+    readonly canonicalPrintingId: string;
+    readonly printingIds: readonly string[];
+  }[];
+}
+
+
 export interface ModelBundle {
   readonly manifest: ModelManifest;
   readonly proposal: ArrayBuffer;
@@ -41,6 +59,7 @@ export interface ModelBundle {
   readonly cardEmbeddingsShape: readonly [rows: number, dim: number];
   readonly playFrequency: PlayFrequency;
   readonly archetypeCentroids: ArchetypeCentroids;
+  readonly vocab: VocabPayload;
 }
 
 async function fetchBuffer(url: string): Promise<ArrayBuffer> {
@@ -97,15 +116,18 @@ export async function loadModelBundle(): Promise<ModelBundle> {
   const playFreqAsset = MODEL_MANIFEST.assets.playFrequency;
   const archAsset = MODEL_MANIFEST.assets.archetypeCentroids;
 
-  // Fire all six fetches in parallel — ~30 MB total in v0.1.0,
-  // dominated by the proposal sidecar. The browser caches them so
-  // the next call is essentially free.
+  // Fire every fetch in parallel — ~30 MB total in v0.1.0, dominated
+  // by the proposal sidecar. The browser caches them so the next call
+  // is essentially free. We include vocab.json here too rather than
+  // letting the worker fetch it on its own; the worker can't compute
+  // the right URL because it sits under ``/assets/...``.
   const [
     proposal,
     evaluator,
     embeddingsBuf,
     playFrequency,
     archetypeCentroids,
+    vocab,
     proposalExt,
     evaluatorExt,
   ] = await Promise.all([
@@ -114,6 +136,7 @@ export async function loadModelBundle(): Promise<ModelBundle> {
     fetchBuffer(modelAssetUrl(embeddingsAsset.path)),
     fetchJson<PlayFrequency>(modelAssetUrl(playFreqAsset.path)),
     fetchJson<ArchetypeCentroids>(modelAssetUrl(archAsset.path)),
+    fetchJson<VocabPayload>(modelAssetUrl("vocab.json")),
     "externalData" in proposalAsset && proposalAsset.externalData
       ? fetchBuffer(modelAssetUrl(proposalAsset.externalData.path))
       : Promise.resolve(null),
@@ -138,5 +161,6 @@ export async function loadModelBundle(): Promise<ModelBundle> {
     cardEmbeddingsShape: [rows, dim],
     playFrequency,
     archetypeCentroids,
+    vocab,
   };
 }

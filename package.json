@@ -10,6 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "prefetch:cards": "tsx build/run-fetch-cards.ts",
+    "prefetch:model": "tsx build/run-fetch-model.ts",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
