@@ -197,13 +197,26 @@ function buildRow(row: DeckRow, format: Format): HTMLElement {
   cost.setAttribute("aria-label", `${row.card.cost} ink`);
   cost.textContent = String(row.card.cost);
 
+  // Two stacked spans: name on line 1, version on line 2. Keeping
+  // them in a flex column inside the grid cell means a long
+  // ``<Card Name>`` + ``<Long Version>`` doesn't ellipsis-clip the
+  // version away on narrow viewports.
+  const nameBlock = document.createElement("span");
+  nameBlock.className = "card-row-nameblock";
   const nameLine = document.createElement("span");
   nameLine.className = "card-row-nameline";
   nameLine.append(buildLegalityDot(cardLegality(row.card, format)));
   const name = document.createElement("span");
   name.className = "card-row-name";
-  name.textContent = row.card.version ? `${row.card.name} — ${row.card.version}` : row.card.name;
+  name.textContent = row.card.name;
   nameLine.append(name);
+  nameBlock.append(nameLine);
+  if (row.card.version) {
+    const version = document.createElement("span");
+    version.className = "card-row-version";
+    version.textContent = row.card.version;
+    nameBlock.append(version);
+  }
 
   const lock = document.createElement("button");
   lock.type = "button";
@@ -215,7 +228,7 @@ function buildRow(row: DeckRow, format: Format): HTMLElement {
     deckStore.update((state) => toggleLock(state, row.card.id).state),
   );
 
-  li.append(countCtrl, thumbWrap, inkBox, cost, nameLine, lock);
+  li.append(countCtrl, thumbWrap, inkBox, cost, nameBlock, lock);
   bindPreviewTrigger(li, row.card);
   return li;
 }

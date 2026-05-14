@@ -145,7 +145,7 @@ export class AppRoot extends HTMLElement {
       <div class="action-bar">
         <ink-selector></ink-selector>
         <format-selector></format-selector>
-        <span style="flex: 1"></span>
+        <span class="action-bar-spacer" aria-hidden="true"></span>
         <deck-generator></deck-generator>
         <deck-export></deck-export>
         <button class="ghost" data-role="clear-deck">Clear deck</button>

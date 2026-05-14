@@ -227,9 +227,17 @@ export class CardFinder extends HTMLElement {
     nameLine.append(buildLegalityDot(status));
     const name = document.createElement("span");
     name.className = "card-row-name";
-    name.textContent = card.version ? `${card.name} — ${card.version}` : card.name;
+    name.textContent = card.name;
     nameLine.append(name);
     nameBox.append(nameLine);
+    if (card.version) {
+      // Version on its own row so long "Name — Version" pairs don't
+      // get ellipsised on narrow viewports.
+      const version = document.createElement("span");
+      version.className = "card-row-version";
+      version.textContent = card.version;
+      nameBox.append(version);
+    }
 
     const meta = document.createElement("span");
     meta.className = "card-row-meta";

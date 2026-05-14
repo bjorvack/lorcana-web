@@ -6,12 +6,31 @@
 
 app-root {
   display: grid;
+  /* Without an explicit columns track the implicit ``auto`` track
+     sizes to the largest min-content child, which lets a single
+     wide row (e.g. the action bar with the Style slider) push the
+     whole layout past the viewport and trigger horizontal scroll
+     on mobile. ``minmax(0, 1fr)`` caps every row at the viewport
+     width and lets children shrink with ``min-width: 0``. */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto 1fr;
   min-height: 100vh;
   max-width: 1280px;
   margin-inline: auto;
   padding: var(--sp-4) var(--sp-5);
+  /* Reserve a strip at the bottom so the fixed <consent-banner>
+     can never overlap content (it pops in on first visit and is
+     dismissed via Accept / Decline). The banner self-sizes to its
+     contents, so this is a generous-but-not-huge floor. */
+  padding-bottom: clamp(var(--sp-4), 5vh, 6rem);
   gap: var(--sp-5);
+}
+/* The body is the scroll container; clip a few accidental
+   horizontal-overflow scenarios (e.g. a runaway selector chip)
+   so a stray child never makes the page horizontally scrollable. */
+html,
+body {
+  overflow-x: hidden;
 }
 
 /* ----- Header --------------------------------------------------- */
@@ -31,6 +50,11 @@ app-root {
   color: var(--text-muted);
   font-size: var(--fs-100);
   font-family: var(--font-mono);
+  /* Let the long ``cards-vYYYY.MM.DD-NN · vX.Y.Z · About`` string
+     line-break inside its own tokens on phones instead of forcing
+     the header to overflow. */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 /* ----- Action bar ----------------------------------------------- */
@@ -47,6 +71,19 @@ app-root {
 }
 .action-bar > * + * {
   margin-left: 0;
+}
+.action-bar-spacer {
+  flex: 1;
+  /* On narrow viewports the spacer would otherwise wrap onto its
+     own line and leave an empty row above the AI controls. Collapse
+     it below the desktop breakpoint so the chips and buttons tile
+     naturally. */
+  min-width: 0;
+}
+@media (max-width: 880px) {
+  .action-bar-spacer {
+    display: none;
+  }
 }
 
 button.primary,
@@ -322,6 +359,24 @@ card-finder {
   min-width: 0;
   display: block;
 }
+/* Subtitle / version dropped to a second line so long pairs like
+   "Hiram Flaversham — Toymaker" never lose half their identity to
+   an ellipsis on narrow viewports. */
+.card-row-version {
+  font-size: var(--fs-100);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  min-width: 0;
+}
+.card-row-nameblock {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
 .card-row-meta {
   color: var(--text-muted);
   font-size: var(--fs-100);
@@ -502,11 +557,16 @@ card-preview[data-visible="true"] {
 }
 
 /* ----- Deck generator (Generate-deck button + style picker) ---- */
+deck-generator {
+  display: block;
+  min-width: 0;
+}
 .deck-generator {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--sp-3);
   flex-wrap: wrap;
+  min-width: 0;
 }
 .deck-generator .generator-style {
   display: inline-flex;
@@ -514,6 +574,10 @@ card-preview[data-visible="true"] {
   gap: var(--sp-2);
   font-size: var(--fs-200);
   color: var(--text-muted);
+  /* Lets the slider + readout collapse onto a second line inside
+     the label rather than push the bar past the viewport. */
+  flex-wrap: wrap;
+  min-width: 0;
 }
 .deck-generator .generator-style-label {
   display: inline-flex;
@@ -631,10 +695,16 @@ format-selector {
 }
 
 /* --- deck export ------------------------------------------ */
+deck-export {
+  display: block;
+  min-width: 0;
+}
 .deck-export {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 .deck-export button:disabled {
   opacity: 0.5;
@@ -955,7 +1025,6 @@ ai-failure-banner[hidden] {
   margin-left: 0.5rem;
   font-size: var(--fs-200);
   color: var(--text-muted);
-  min-width: 12ch;
 }
 
 /* --- consent banner --------------------------------------- */
