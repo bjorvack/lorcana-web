@@ -20,6 +20,7 @@ import { cardLegality } from "../data/legality";
 import { type LogicalCard, logicalCards } from "../data/logical";
 import { addCard } from "../state/deck";
 import { deckStore } from "../state/index";
+import { bindImageFallback } from "../utils/card-image";
 import { debounce } from "../utils/debounce";
 import { bindPreviewTrigger } from "./card-preview";
 
@@ -200,6 +201,7 @@ export class CardFinder extends HTMLElement {
     img.decoding = "async";
     img.alt = `${card.name}${card.version ? ` — ${card.version}` : ""}`;
     img.dataset.printing = printing.id;
+    bindImageFallback(img, img.alt);
     thumbWrap.append(img);
 
     const inkBox = document.createElement("span");

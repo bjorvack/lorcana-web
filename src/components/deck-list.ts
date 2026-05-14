@@ -15,6 +15,7 @@ import { cardLegality, type Format } from "../data/legality";
 import { removeCard, setCount, toggleLock } from "../state/deck";
 import { deckStore } from "../state/index";
 import { type CardType, type DeckRow, TYPES, deckRows } from "../state/selectors";
+import { bindImageFallback } from "../utils/card-image";
 import { buildLegalityDot } from "./card-finder";
 import { bindPreviewTrigger } from "./card-preview";
 
@@ -112,6 +113,7 @@ function buildRow(row: DeckRow, format: Format): HTMLElement {
   img.loading = "lazy";
   img.decoding = "async";
   img.alt = `${row.card.name}${row.card.version ? ` — ${row.card.version}` : ""}`;
+  bindImageFallback(img, img.alt);
   thumbWrap.append(img);
 
   const countCtrl = document.createElement("span");
