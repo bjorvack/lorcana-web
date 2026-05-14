@@ -793,3 +793,92 @@ select:focus-visible,
   outline: 2px solid var(--accent, #6aa3ff);
   outline-offset: 2px;
 }
+
+/* --- about modal ----------------------------------------- */
+about-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: block;
+}
+about-modal[hidden] {
+  display: none;
+}
+.about-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+.about-card {
+  position: relative;
+  z-index: 1;
+  max-width: min(560px, 92vw);
+  max-height: 86vh;
+  margin: 7vh auto;
+  background: var(--bg-elevated, #1a1a1a);
+  border: 1px solid var(--border, #444);
+  border-radius: var(--radius-md, 10px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
+}
+.about-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.about-card h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+.about-card h3 {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.about-card section {
+  margin-bottom: 0.75rem;
+}
+.about-dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  font-size: var(--fs-200);
+}
+.about-dl dt {
+  color: var(--text-muted);
+}
+.about-dl dd {
+  margin: 0;
+  word-break: break-all;
+}
+.about-dl code {
+  font-size: 0.85rem;
+}
+.about-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: var(--fs-200);
+}
+.about-list li + li {
+  margin-top: 0.25rem;
+}
+body.modal-open {
+  overflow: hidden;
+}
+
+button.link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent, #6aa3ff);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}

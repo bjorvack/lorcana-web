@@ -18,6 +18,8 @@ import { deckStore, initialWarnings } from "../state/index";
 import { totalCards } from "../state/selectors";
 import { buildHash } from "../state/url";
 import { VERSION } from "../version";
+import "./about-modal";
+import type { AboutModal } from "./about-modal";
 import "./banner";
 import type { AppBanner } from "./banner";
 import "./card-finder";
@@ -106,10 +108,12 @@ export class AppRoot extends HTMLElement {
         <h1>Lorcana Deckbuilder</h1>
         <span class="meta">
           ${CARD_COUNT} cards · ${CARDS_RELEASE_TAG} · v${VERSION}
+          · <button class="link" type="button" data-role="open-about">About</button>
         </span>
       </header>
 
       <app-banner hidden></app-banner>
+      <about-modal></about-modal>
 
       <div class="action-bar">
         <ink-selector></ink-selector>
@@ -143,6 +147,10 @@ export class AppRoot extends HTMLElement {
     const clear = this.querySelector<HTMLButtonElement>('[data-role="clear-deck"]');
     clear?.addEventListener("click", () => {
       deckStore.update((state) => clearDeck(state).state);
+    });
+    const about = this.querySelector<HTMLButtonElement>('[data-role="open-about"]');
+    about?.addEventListener("click", () => {
+      this.querySelector<AboutModal>("about-modal")?.open();
     });
   }
 }

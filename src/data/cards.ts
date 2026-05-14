@@ -16,4 +16,10 @@ export const cardSet: CardSetT = CardSet.parse(raw);
 export const cards: readonly CardT[] = cardSet.cards;
 export const cardsById: ReadonlyMap<string, CardT> = new Map(cards.map((c) => [c.id, c]));
 
-export { CARDS_RELEASE_TAG, CARD_SET_VERSION, CARDS_JSON_SHA256, CARD_COUNT } from "./cards.meta";
+export {
+  CARDS_RELEASE_TAG,
+  CARD_SET_VERSION,
+  CARDS_JSON_SHA256,
+  CARD_COUNT,
+  LEGALITY_RELEASE_TAG,
+} from "./cards.meta";
