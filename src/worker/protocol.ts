@@ -92,8 +92,28 @@ export interface WorkerErrorEvent {
   readonly message: string;
 }
 
-export type WorkerRequest = InitRequest | GenerateRequest;
+/**
+ * Score a *complete or partial* deck against the evaluator. Used to
+ * power live realism updates as the user edits their deck — same
+ * underlying calibrated score the search loop computes after a
+ * Generate, just on demand.
+ */
+export interface ScoreRequest {
+  readonly kind: "score";
+  readonly requestId: number;
+  /** Card ids (logical 1..N) + counts. */
+  readonly cards: ReadonlyArray<readonly [number, number]>;
+}
+
+export interface ScoreDoneEvent {
+  readonly kind: "score-done";
+  readonly requestId: number;
+  readonly realism: number;
+}
+
+export type WorkerRequest = InitRequest | GenerateRequest | ScoreRequest;
 export type WorkerEvent =
+  | ScoreDoneEvent
   | InitDoneEvent
   | GenerateProgressEvent
   | GenerateDoneEvent

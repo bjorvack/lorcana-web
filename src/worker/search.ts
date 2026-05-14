@@ -397,7 +397,7 @@ function pickSeedCard(
   return bestId;
 }
 
-async function scoreRealism(ctx: SearchContext, partial: PartialDeck): Promise<number> {
+export async function scoreRealism(ctx: SearchContext, partial: PartialDeck): Promise<number> {
   // Approximate: take 8 random card-positions, for each evaluate
   // "if this card were the next pick, how plausible?". Averaging
   // these is good enough for a UI pill; the full leave-one-out

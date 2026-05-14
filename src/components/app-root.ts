@@ -20,6 +20,7 @@ import { buildHash } from "../state/url";
 import { VERSION } from "../version";
 import "./about-modal";
 import type { AboutModal } from "./about-modal";
+import "./ai-failure-banner";
 import "./banner";
 import type { AppBanner } from "./banner";
 import "./card-finder";
@@ -136,6 +137,7 @@ export class AppRoot extends HTMLElement {
       </header>
 
       <app-banner hidden></app-banner>
+      <ai-failure-banner hidden></ai-failure-banner>
       <about-modal></about-modal>
 
       <div class="action-bar">

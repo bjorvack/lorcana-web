@@ -25,20 +25,33 @@ export class RealismPill extends HTMLElement {
   }
 
   private render(): void {
-    const r = generationStore.get().lastRealism;
-    if (r === null) {
+    const { lastRealism: r, scoring } = generationStore.get();
+    if (r === null && !scoring) {
       this.hidden = true;
       this.innerHTML = "";
       return;
     }
     this.hidden = false;
+    if (r === null) {
+      // First score still in flight; render a minimal "Scoring…" pill
+      // rather than a 0% number that would mislead the user.
+      this.className = "realism-pill realism-pill-pending";
+      this.title = "Scoring the deck against the evaluator…";
+      this.innerHTML = `
+        <span class="realism-pill-label">Realism</span>
+        <span class="realism-pill-value">(scoring…)</span>
+      `;
+      return;
+    }
     const pct = Math.round(r * 100);
     const kind = pct >= 70 ? "high" : pct >= 40 ? "mid" : "low";
     this.className = `realism-pill realism-pill-${kind}`;
-    this.title = "How plausible the evaluator thinks this deck is. Updates after every Generate.";
+    this.title =
+      "How plausible the evaluator thinks this deck is. Updates as you edit (300 ms debounce).";
     this.innerHTML = `
       <span class="realism-pill-label">Realism</span>
       <span class="realism-pill-value">${pct}%</span>
+      ${scoring ? '<span class="realism-pill-updating">(updating…)</span>' : ""}
     `;
   }
 }

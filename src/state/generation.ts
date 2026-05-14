@@ -18,34 +18,31 @@ import { deckStore } from "./index";
 
 export interface GenerationState {
   /** Calibrated evaluator score in [0, 1] from the most recent
-   *  Generate, or ``null`` if the deck has been edited since (or
-   *  Generate has never run). */
+   *  Generate or live re-score, or ``null`` if we haven't scored yet
+   *  / the deck is empty. */
   readonly lastRealism: number | null;
+  /** True while a debounced live re-score is in flight; the pill
+   *  renders an "(updating…)" annotation. */
+  readonly scoring: boolean;
 }
 
 export const generationStore: Store<GenerationState> = createStore<GenerationState>({
   lastRealism: null,
+  scoring: false,
 });
 
-// Invalidate ``lastRealism`` whenever the deck changes. We compare a
-// fingerprint of the deck contents to avoid resetting on a no-op
-// store update (e.g. a format swap that doesn't touch the cards).
-let lastFingerprint = fingerprint(deckStore.get().cards);
+// Clear ``lastRealism`` only when the deck goes empty. While the deck
+// has cards, the live-realism scorer in ``state/live-realism.ts``
+// takes over: it leaves the previous value in place and toggles the
+// ``scoring`` flag so the pill shows "Realism N% (updating…)" until
+// a fresh score lands. Per DESIGN Q4, "the number itself never
+// blanks; we always show the last known value with a (updating…)
+// suffix so the UI doesn't flicker."
 deckStore.subscribe((state) => {
-  const fp = fingerprint(state.cards);
-  if (fp !== lastFingerprint) {
-    lastFingerprint = fp;
-    if (generationStore.get().lastRealism !== null) {
-      generationStore.set({ lastRealism: null });
+  if (state.cards.size === 0) {
+    const g = generationStore.get();
+    if (g.lastRealism !== null || g.scoring) {
+      generationStore.set({ lastRealism: null, scoring: false });
     }
   }
 });
-
-function fingerprint(cards: ReadonlyMap<string, number>): string {
-  // Insertion order is stable for Map, and the deck reducers always
-  // clone the Map, so the order reflects edit history. Fine for a
-  // change detector but not safe for cross-session equality.
-  const parts: string[] = [];
-  for (const [id, count] of cards) parts.push(`${id}:${count}`);
-  return parts.join(",");
-}

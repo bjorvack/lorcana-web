@@ -12,7 +12,7 @@ import * as ort from "onnxruntime-web";
 import type { GenerateProgressEvent, ModelBundle, WorkerEvent, WorkerRequest } from "./protocol";
 import { resolveStyleMix } from "./protocol";
 
-import { type SearchContext, completeDeck } from "./search";
+import { type SearchContext, completeDeck, partialFromInitial, scoreRealism } from "./search";
 
 let ctx: SearchContext | null = null;
 
@@ -186,6 +186,20 @@ function deriveFromLegalIds(legalIds: Uint8Array): Uint8Array {
   return out;
 }
 
+async function handleScore(req: {
+  requestId: number;
+  cards: ReadonlyArray<readonly [number, number]>;
+}): Promise<void> {
+  if (!ctx) throw new Error("worker not initialised; send 'init' first");
+  const partial = partialFromInitial(req.cards);
+  const realism = await scoreRealism(ctx, partial);
+  emit({
+    kind: "score-done",
+    requestId: req.requestId,
+    realism,
+  });
+}
+
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const req = event.data;
   try {
@@ -193,6 +207,8 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       await handleInit(req);
     } else if (req.kind === "generate") {
       await handleGenerate(req);
+    } else if (req.kind === "score") {
+      await handleScore(req);
     }
   } catch (e) {
     emit({

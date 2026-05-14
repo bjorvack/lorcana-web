@@ -910,3 +910,43 @@ button.link {
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+.realism-pill-updating {
+  margin-left: 0.25rem;
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+.realism-pill-pending {
+  border-color: var(--text-muted);
+  background: rgba(127, 127, 127, 0.08);
+}
+
+/* --- ai failure banner ------------------------------------ */
+ai-failure-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid rgba(229, 57, 53, 0.5);
+  background: rgba(229, 57, 53, 0.08);
+  margin: 0.5rem 0;
+}
+ai-failure-banner[hidden] {
+  display: none;
+}
+.ai-failure-icon {
+  font-size: 1.2rem;
+  color: #e53935;
+}
+.ai-failure-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: var(--fs-200);
+}
+.ai-failure-body strong {
+  font-weight: 600;
+}

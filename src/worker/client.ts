@@ -61,6 +61,20 @@ export class InferenceClient extends EventTarget {
     return { deck: event.deck, realism: event.realism };
   }
 
+  /** Run the evaluator on the current deck and return a 0..1 score. */
+  async score(cards: ReadonlyArray<readonly [number, number]>): Promise<number> {
+    if (!this.#worker) throw new Error("InferenceClient.init() not awaited yet");
+    const event = await this.#request<WorkerEvent>({
+      kind: "score",
+      requestId: this.#nextRequestId++,
+      cards,
+    });
+    if (event.kind !== "score-done") {
+      throw new Error(`unexpected event kind: ${event.kind}`);
+    }
+    return event.realism;
+  }
+
   #request<T extends WorkerEvent>(req: {
     kind: string;
     requestId: number;

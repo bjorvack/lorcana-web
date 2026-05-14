@@ -15,13 +15,15 @@ import { computeMaxCopies, type CardT, type InkT } from "@bjorvack/lorcana-schem
 
 import { cardsById } from "../data/cards";
 import { isLegalNow, type Format } from "../data/legality";
-import { loadModelBundle } from "../model/bundle";
-import { loadVocabMap, type VocabMap } from "../model/vocab";
+import { ensureClient } from "../model/inference-singleton";
+import type { VocabMap } from "../model/vocab";
+import { aiStore, setAIFailed, setAIOk } from "../state/ai";
 import { addCard, clearDeck, toggleLock } from "../state/deck";
 import { generationStore } from "../state/generation";
 import { deckStore } from "../state/index";
+import { setGenerating, startLiveRealism } from "../state/live-realism";
 import { totalCards } from "../state/selectors";
-import { InferenceClient } from "../worker/client";
+import type { InferenceClient } from "../worker/client";
 import type { GenerateProgressEvent } from "../worker/protocol";
 
 const TAG = "deck-generator";
@@ -43,6 +45,7 @@ export class DeckGenerator extends HTMLElement {
   #lastRealism: number | null = null;
   #hasGeneratedThisSession = false;
   #unsubscribe?: () => void;
+  #unsubscribeAI?: () => void;
 
   connectedCallback(): void {
     this.render();
@@ -52,6 +55,9 @@ export class DeckGenerator extends HTMLElement {
     );
     // Refresh the discoverability hint as the deck grows / shrinks.
     this.#unsubscribe = deckStore.subscribe(() => this.refreshHint());
+    // Re-render Generate when the AI subsystem flips between
+    // ok / failed so the button reflects the current availability.
+    this.#unsubscribeAI = aiStore.subscribe(() => this.updateView());
     this.refreshHint();
     this.querySelector<HTMLButtonElement>('[data-role="hint-dismiss"]')?.addEventListener(
       "click",
@@ -69,6 +75,7 @@ export class DeckGenerator extends HTMLElement {
 
   disconnectedCallback(): void {
     this.#unsubscribe?.();
+    this.#unsubscribeAI?.();
   }
 
   private refreshHint(): void {
@@ -97,23 +104,46 @@ export class DeckGenerator extends HTMLElement {
       this.setPhase("error", { error: "Pick at least one ink first." });
       return;
     }
+    let initJustSucceeded = false;
     try {
       this.setPhase("loading-model", { progress: "Downloading model bundle (~30 MB)…" });
-      // Lazy init on the first call: load + spawn worker + push bundle.
-      if (!this.#client) {
-        const [bundle, vocab] = await Promise.all([loadModelBundle(), loadVocabMap()]);
-        this.#vocab = vocab;
-        this.#client = new InferenceClient();
-        this.#client.addEventListener("progress", (ev) => {
+      // Lazy init on the first call. Routed through the singleton so
+      // the live-realism scorer shares the same worker once it lands.
+      // A failure here is permanent for the lifetime of the page —
+      // tag the AI subsystem as failed and bail; the persistent
+      // <app-banner> + Retry button is the user's only recovery path.
+      let inf: Awaited<ReturnType<typeof ensureClient>>;
+      try {
+        inf = await ensureClient((phase) => {
+          this.setPhase("loading-model", {
+            progress:
+              phase === "downloading-bundle"
+                ? "Downloading model bundle (~30 MB)…"
+                : "Loading ONNX sessions…",
+          });
+        });
+      } catch (initErr) {
+        const msg = initErr instanceof Error ? initErr.message : String(initErr);
+        setAIFailed(msg);
+        this.setPhase("error", { error: msg });
+        return;
+      }
+      const { client, vocab } = inf;
+      if (this.#client !== client) {
+        this.#client = client;
+        initJustSucceeded = true;
+        client.addEventListener("progress", (ev) => {
           const { detail } = ev as CustomEvent<GenerateProgressEvent>;
           this.setPhase("generating", {
             progress: `Picking card ${detail.currentSize} / ${detail.targetSize}…`,
           });
         });
-        this.setPhase("loading-model", { progress: "Loading ONNX sessions…" });
-        await this.#client.init(bundle);
+        // Now that the worker is live, the live-realism scorer can
+        // start re-evaluating on every edit (debounced).
+        startLiveRealism();
       }
-      if (!this.#vocab) this.#vocab = await loadVocabMap();
+      this.#vocab = vocab;
+      if (initJustSucceeded) setAIOk();
 
       // Map the user's partial (printing ids) to logical indices.
       // Locked rows go into the partial too; the model conditions
@@ -140,6 +170,10 @@ export class DeckGenerator extends HTMLElement {
       const legalLogicalIds = buildLegalLogicalIds(this.#vocab, state.inks, state.format);
 
       this.setPhase("generating", { progress: "Calling the model…" });
+      // Pause the live-realism scorer for the duration of Generate
+      // so a stale partial-deck score doesn't land on top of the
+      // real post-Generate one.
+      setGenerating(true);
       // Lorcana's actual rule is "at least 60 cards"; tournament-grade
       // decks routinely run a few over to widen the pool for searches.
       // We aim a bit over so silent rejections (e.g. a card whose ink
@@ -159,16 +193,17 @@ export class DeckGenerator extends HTMLElement {
       // least its locked count).
       this.applyGeneratedDeck(deck, lockedPrintingIds);
       this.#lastRealism = realism;
-      // ``generationStore`` clears itself on the next deck mutation
-      // (see ``state/generation.ts``), so publishing here is safe
-      // even though ``applyGeneratedDeck`` triggers a store update.
-      generationStore.set({ lastRealism: realism });
+      generationStore.set({ lastRealism: realism, scoring: false });
       this.#hasGeneratedThisSession = true;
       this.refreshHint();
       this.setPhase("done", { progress: `Done. Realism ${(realism * 100).toFixed(0)}%.` });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       this.setPhase("error", { error: msg });
+    } finally {
+      // Re-arm live scoring once Generate has settled (success or
+      // failure either way).
+      setGenerating(false);
     }
   }
 
@@ -219,8 +254,10 @@ export class DeckGenerator extends HTMLElement {
   private updateView(): void {
     const btn = this.querySelector<HTMLButtonElement>('[data-role="generate"]');
     if (btn) {
-      btn.disabled = this.#phase === "loading-model" || this.#phase === "generating";
+      const aiDown = aiStore.get().status === "failed";
+      btn.disabled = aiDown || this.#phase === "loading-model" || this.#phase === "generating";
       btn.textContent = this.#phase === "generating" ? "Generating…" : "Generate deck";
+      btn.title = aiDown ? "The AI worker is currently unavailable. See the banner above." : "";
     }
     const status = this.querySelector<HTMLElement>('[data-role="status"]');
     if (status) {
