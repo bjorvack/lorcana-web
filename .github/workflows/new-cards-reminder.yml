@@ -17,6 +17,11 @@ on:
   schedule:
     - cron: "0 9 * * *"
   workflow_dispatch: {}
+  # Fired by the training repo whenever a new ``model-vN`` lands.
+  # Closes the daily-cron gap so the version-bump PR (and the
+  # resulting deploy) lands within minutes of the upstream release.
+  repository_dispatch:
+    types: [upstream-model-released]
 
 permissions:
   contents: write
