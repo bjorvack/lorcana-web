@@ -1,11 +1,131 @@
 name: new-cards-reminder
+
+# Polls upstream daily. When the pinned ``CARDS_RELEASE_TAG`` or
+# ``MODEL_RELEASE_TAG`` in ``src/version.ts`` falls behind the latest
+# published releases (on ``bjorvack/lorcana-scraper`` and
+# ``bjorvack/lorcana-training`` respectively), opens a PR bumping
+# the matching pair.
+#
+# Cards and model must agree on a single ``cardSetVersion`` (the build
+# enforces this in ``build/fetch-model.ts``). If the latest model
+# was trained against an older cards-vN, we bump cards back to that
+# tag rather than ship a build that can't pass the cross-check.
+# ``LEGALITY_RELEASE_TAG`` still points at the freshest scraper
+# release so banlist + rotation never lag.
+
 on:
   schedule:
     - cron: "0 9 * * *"
-  workflow_dispatch:
-# TODO: open an issue if the pinned cards-vN drifted from latest.
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
-  noop:
+  poll:
     runs-on: ubuntu-latest
     steps:
-      - run: echo stub
+      - uses: actions/checkout@v4
+
+      - name: Resolve latest model-vN + matching cards-vN + legality
+        id: latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          model=$(gh release list --repo bjorvack/lorcana-training --limit 50 --json tagName,isPrerelease -q '.[] | select(.isPrerelease|not) | .tagName' \
+            | grep -E '^model-v' | head -n 1)
+          [ -n "$model" ] || { echo "No non-prerelease model-vN found"; exit 1; }
+          # Pull the model's manifest to learn which cards-vN it was
+          # trained against — that's the cards tag we must pin.
+          gh release download "$model" --repo bjorvack/lorcana-training -p model-manifest.json -D /tmp/m
+          model_cards=$(python3 -c "import json; print(json.load(open('/tmp/m/model-manifest.json'))['sources']['cardsReleaseTag'])")
+          # Banlist + rotation can come from a strictly newer scraper
+          # release than the cards tag the model was trained against.
+          legality=$(gh release list --repo bjorvack/lorcana-scraper --limit 50 --json tagName -q '.[].tagName' \
+            | grep -E '^cards-v' | head -n 1)
+          echo "model=$model" >> "$GITHUB_OUTPUT"
+          echo "cards=$model_cards" >> "$GITHUB_OUTPUT"
+          # If model + legality come from the same scraper release,
+          # set LEGALITY_RELEASE_TAG to null so cards / model /
+          # legality travel as a single pin.
+          if [ "$legality" = "$model_cards" ]; then
+            echo "legality=null" >> "$GITHUB_OUTPUT"
+          else
+            echo "legality=\"$legality\"" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read current pins
+        id: current
+        run: |
+          set -euo pipefail
+          cur_cards=$(grep -E '^export const CARDS_RELEASE_TAG' src/version.ts | sed -E 's/.*= *"([^"]+)".*/\1/')
+          cur_model=$(grep -E '^export const MODEL_RELEASE_TAG' src/version.ts | sed -E 's/.*= *"([^"]+)".*/\1/' | head -n 1)
+          cur_leg=$(grep -E '^export const LEGALITY_RELEASE_TAG' src/version.ts | sed -E 's/.*= *(.*);.*/\1/')
+          echo "cards=$cur_cards" >> "$GITHUB_OUTPUT"
+          echo "model=$cur_model" >> "$GITHUB_OUTPUT"
+          echo "legality=$cur_leg" >> "$GITHUB_OUTPUT"
+
+      - name: Decide whether to bump
+        id: decide
+        run: |
+          set -euo pipefail
+          want_legality="${{ steps.latest.outputs.legality }}"
+          have_legality='${{ steps.current.outputs.legality }}'
+          if [ "${{ steps.latest.outputs.cards }}" = "${{ steps.current.outputs.cards }}" ] \
+             && [ "${{ steps.latest.outputs.model }}" = "${{ steps.current.outputs.model }}" ] \
+             && [ "$want_legality" = "$have_legality" ]; then
+            echo "fresh=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply bump
+        if: steps.decide.outputs.fresh != '1'
+        run: |
+          set -euo pipefail
+          sed -i.bak -E "s|(export const CARDS_RELEASE_TAG[^=]*= *)\"[^\"]+\"|\1\"${{ steps.latest.outputs.cards }}\"|" src/version.ts
+          sed -i.bak -E "s|(export const MODEL_RELEASE_TAG[^=]*= *)\"[^\"]+\"|\1\"${{ steps.latest.outputs.model }}\"|" src/version.ts
+          # LEGALITY_RELEASE_TAG is either ``null`` or a quoted tag —
+          # rewrite the entire ``= …;`` tail rather than do conditional
+          # branching inside sed.
+          python3 - <<'PY'
+          import re, pathlib
+          p = pathlib.Path('src/version.ts')
+          src = p.read_text()
+          new = '${{ steps.latest.outputs.legality }}'
+          src = re.sub(
+              r'(export const LEGALITY_RELEASE_TAG[^=]*= *)([^;]+)(;)',
+              lambda m: m.group(1) + new + m.group(3),
+              src,
+              count=1,
+          )
+          p.write_text(src)
+          PY
+          rm -f src/version.ts.bak
+          git diff -- src/version.ts || true
+
+      - name: Open / update PR
+        if: steps.decide.outputs.fresh != '1'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/bump-pinned-artifacts
+          commit-message: |
+            chore(version): bump pinned cards-vN + model-vN
+
+            cards: ${{ steps.current.outputs.cards }} -> ${{ steps.latest.outputs.cards }}
+            model: ${{ steps.current.outputs.model }} -> ${{ steps.latest.outputs.model }}
+            legality: ${{ steps.current.outputs.legality }} -> ${{ steps.latest.outputs.legality }}
+          title: "chore(version): bump pinned cards-vN + model-vN"
+          body: |
+            The pinned upstream artifacts in `src/version.ts` fell
+            behind the latest published releases. This PR bumps cards
+            + model + legality together so the
+            `cardSetVersion` cross-check in `build/fetch-model.ts`
+            stays satisfied.
+
+            - cards: `${{ steps.current.outputs.cards }}` → `${{ steps.latest.outputs.cards }}`
+            - model: `${{ steps.current.outputs.model }}` → `${{ steps.latest.outputs.model }}`
+            - legality: `${{ steps.current.outputs.legality }}` → `${{ steps.latest.outputs.legality }}`
+
+            Auto-generated by `.github/workflows/new-cards-reminder.yml`.
+          labels: chore, automation
