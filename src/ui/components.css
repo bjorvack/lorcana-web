@@ -692,3 +692,36 @@ mana-curve {
   width: 100%;
   display: block;
 }
+
+/* --- realism pill ------------------------------------------ */
+realism-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border, #444);
+  font-size: var(--fs-200);
+  margin-left: 0.6rem;
+}
+realism-pill[hidden] {
+  display: none;
+}
+.realism-pill-label {
+  color: var(--text-muted);
+}
+.realism-pill-value {
+  font-weight: 600;
+}
+.realism-pill-high {
+  border-color: rgba(76, 175, 80, 0.5);
+  background: rgba(76, 175, 80, 0.1);
+}
+.realism-pill-mid {
+  border-color: rgba(251, 192, 45, 0.5);
+  background: rgba(251, 192, 45, 0.1);
+}
+.realism-pill-low {
+  border-color: rgba(229, 57, 53, 0.5);
+  background: rgba(229, 57, 53, 0.1);
+}

@@ -26,6 +26,7 @@ import "./deck-generator";
 import "./deck-list";
 import "./format-selector";
 import "./mana-curve";
+import "./realism-pill";
 import type { FormatSelector } from "./format-selector";
 // `InkSelector` is used only as a TypeScript type below, so we also
 // need the side-effect import to ensure the custom element gets
@@ -122,6 +123,7 @@ export class AppRoot extends HTMLElement {
         <section class="panel" aria-labelledby="deck-heading">
           <header>
             <h2 id="deck-heading">Deck</h2>
+            <realism-pill hidden></realism-pill>
             <span class="count" data-role="deck-count">${totalCards(deckStore.get())} / 60</span>
           </header>
           <mana-curve></mana-curve>

@@ -18,6 +18,7 @@ import { isLegalNow, type Format } from "../data/legality";
 import { loadModelBundle } from "../model/bundle";
 import { loadVocabMap, type VocabMap } from "../model/vocab";
 import { addCard, clearDeck, toggleLock } from "../state/deck";
+import { generationStore } from "../state/generation";
 import { deckStore } from "../state/index";
 import { totalCards } from "../state/selectors";
 import { InferenceClient } from "../worker/client";
@@ -122,6 +123,10 @@ export class DeckGenerator extends HTMLElement {
       // least its locked count).
       this.applyGeneratedDeck(deck, lockedPrintingIds);
       this.#lastRealism = realism;
+      // ``generationStore`` clears itself on the next deck mutation
+      // (see ``state/generation.ts``), so publishing here is safe
+      // even though ``applyGeneratedDeck`` triggers a store update.
+      generationStore.set({ lastRealism: realism });
       this.setPhase("done", { progress: `Done. Realism ${(realism * 100).toFixed(0)}%.` });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
