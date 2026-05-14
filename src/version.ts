@@ -12,7 +12,7 @@
  * installed package's major version matches this value.
  */
 
-export const CARDS_RELEASE_TAG = "cards-v2026.05.13-01";
+export const CARDS_RELEASE_TAG = "cards-v2026.05.14-01";
 
 // First trained release on tournaments-v0.3.0 (1 046 tournaments,
 // 6 137 decks). Proposal net + per-step evaluator + play_frequency
