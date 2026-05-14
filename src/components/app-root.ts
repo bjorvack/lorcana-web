@@ -27,6 +27,7 @@ import "./deck-list";
 import "./format-selector";
 import "./mana-curve";
 import "./realism-pill";
+import "./type-breakdown";
 import type { FormatSelector } from "./format-selector";
 // `InkSelector` is used only as a TypeScript type below, so we also
 // need the side-effect import to ensure the custom element gets
@@ -127,6 +128,7 @@ export class AppRoot extends HTMLElement {
             <span class="count" data-role="deck-count">${totalCards(deckStore.get())} / 60</span>
           </header>
           <mana-curve></mana-curve>
+          <type-breakdown></type-breakdown>
           <deck-list></deck-list>
         </section>
 

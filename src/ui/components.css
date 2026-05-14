@@ -725,3 +725,30 @@ realism-pill[hidden] {
   border-color: rgba(229, 57, 53, 0.5);
   background: rgba(229, 57, 53, 0.1);
 }
+
+/* --- type breakdown --------------------------------------- */
+type-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.6rem;
+}
+.type-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border, #444);
+  font-size: var(--fs-200);
+  color: var(--text-muted);
+  background: transparent;
+}
+.type-chip-count {
+  font-weight: 600;
+  color: var(--text);
+}
+.type-chip-empty {
+  font-size: var(--fs-200);
+  color: var(--text-muted);
+}
