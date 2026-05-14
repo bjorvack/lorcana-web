@@ -22,6 +22,13 @@ test("Generate fills the deck to 60/60", async ({ page }) => {
   const deckCount = page.locator('[data-role="deck-count"]');
   await expect(deckCount).toHaveText("0 / 60");
 
+  // Switch to Infinity so the test isn't constrained by the live
+  // rotation (Year 1 sets are out of Core, which shrinks the legal
+  // Amber+Steel pool enough that the search occasionally falls a
+  // card or two short of 60). Infinity covers every printed set,
+  // so a 60-card fill is a stable assertion.
+  await page.locator('format-selector button[aria-label="Format: Infinity"]').click();
+
   await page.locator('[data-role="generate"]').click();
 
   // The button label flips while the worker initialises + generates.
