@@ -12,7 +12,7 @@
  * installed package's major version matches this value.
  */
 
-export const CARDS_RELEASE_TAG = "cards-v2026.05.14-01";
+export const CARDS_RELEASE_TAG = "cards-v2026.05.14-02";
 
 /**
  * Optional override: pull ``banlist.json`` + ``rotation.json`` from a
@@ -24,7 +24,7 @@ export const CARDS_RELEASE_TAG = "cards-v2026.05.14-01";
  * hash. Set to ``null`` to use the same tag as cards. With cards +
  * model now paired on the same scrape, no override is needed.
  */
-export const LEGALITY_RELEASE_TAG: string | null = "cards-v2026.05.14-02";
+export const LEGALITY_RELEASE_TAG: string | null = null;
 
 // First trained release on tournaments-v0.3.0 (1 046 tournaments,
 // 6 137 decks). Proposal net + per-step evaluator + play_frequency
@@ -34,7 +34,7 @@ export const LEGALITY_RELEASE_TAG: string | null = "cards-v2026.05.14-02";
 // Bump this in lock-step with CARDS_RELEASE_TAG: the build's
 // fetch-model plugin enforces that the model's cardSetVersion
 // equals the cards.json's cardSetVersion or the build fails.
-export const MODEL_RELEASE_TAG: string | null = "model-v0.4.0";
+export const MODEL_RELEASE_TAG: string | null = "model-v0.5.0";
 
 export const EXPECTED_SCHEMA_MAJOR = 0;
 
