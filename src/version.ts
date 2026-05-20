@@ -34,7 +34,7 @@ export const LEGALITY_RELEASE_TAG: string | null = null;
 // Bump this in lock-step with CARDS_RELEASE_TAG: the build's
 // fetch-model plugin enforces that the model's cardSetVersion
 // equals the cards.json's cardSetVersion or the build fails.
-export const MODEL_RELEASE_TAG: string | null = "model-v0.7.0";
+export const MODEL_RELEASE_TAG: string | null = "model-v0.8.0";
 
 export const EXPECTED_SCHEMA_MAJOR = 0;
 
