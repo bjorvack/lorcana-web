@@ -24,7 +24,7 @@ export const CARDS_RELEASE_TAG = "cards-v2026.05.15-01";
  * hash. Set to ``null`` to use the same tag as cards. With cards +
  * model now paired on the same scrape, no override is needed.
  */
-export const LEGALITY_RELEASE_TAG: string | null = "cards-v2026.08.01-01";
+export const LEGALITY_RELEASE_TAG: string | null = "cards-v2026.09.01-01";
 
 // First trained release on tournaments-v0.3.0 (1 046 tournaments,
 // 6 137 decks). Proposal net + per-step evaluator + play_frequency
